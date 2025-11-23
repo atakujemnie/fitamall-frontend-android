@@ -6,9 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../shared/theme';
 import { useAuth } from '../../features/auth/AuthContext';
 import { ServiceProvider } from '../../shared/api/auth.types';
-import { AppStackParamList } from '../navigation/AppNavigator';
+import { MainStackParamList } from '../navigation/AppNavigator';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<AppStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
