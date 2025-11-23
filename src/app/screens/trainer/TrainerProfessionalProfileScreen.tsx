@@ -26,15 +26,18 @@ interface Option {
 
 interface TrainerProfileResponse {
   headline?: string;
+  bio?: string;
   about?: string;
   years_of_experience?: number;
   yearsOfExperience?: number;
+  experience_years?: number;
   specialization_ids?: Array<string | number>;
   specializationIds?: Array<string | number>;
   training_modes?: string[];
   trainingModes?: string[];
   target_group_ids?: Array<string | number>;
   targetGroupIds?: Array<string | number>;
+  languages?: string[];
   specialization_options?: unknown[];
   specializations?: unknown[];
   available_specializations?: unknown[];
@@ -104,7 +107,10 @@ const clampCompletion = (value?: number): number => {
 };
 
 const getYearsValue = (payload: TrainerProfileResponse): number | undefined => {
-  const years = payload.years_of_experience ?? payload.yearsOfExperience;
+  const years =
+    payload.experience_years ??
+    payload.years_of_experience ??
+    payload.yearsOfExperience;
 
   if (typeof years !== 'number' || Number.isNaN(years)) {
     return undefined;
@@ -135,6 +141,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   const [headline, setHeadline] = useState('');
   const [about, setAbout] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
+  const [languages, setLanguages] = useState('');
 
   const [specializationIds, setSpecializationIds] = useState<Array<string | number>>([]);
   const [trainingModes, setTrainingModes] = useState<string[]>([]);
@@ -151,8 +158,9 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   }, [state.token]);
 
   const hydrateForm = useCallback((payload: TrainerProfileResponse) => {
-    setHeadline(payload.headline ?? '');
-    setAbout(payload.about ?? '');
+    const bio = payload.bio ?? payload.headline ?? '';
+    setHeadline(bio);
+    setAbout(payload.about ?? bio);
 
     const yearsValue = getYearsValue(payload);
     setYearsOfExperience(yearsValue === undefined ? '' : String(yearsValue));
@@ -162,6 +170,12 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     );
     setTrainingModes(normalizeTrainingModes(payload.training_modes ?? payload.trainingModes));
     setTargetGroupIds(normalizeSelectionIds(payload.target_group_ids ?? payload.targetGroupIds));
+
+    if (Array.isArray(payload.languages)) {
+      setLanguages(payload.languages.join(', '));
+    } else {
+      setLanguages('');
+    }
 
     setSpecializationOptions(
       toOptionList(
@@ -277,7 +291,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
     if (trimmedYears) {
       if (!Number.isFinite(parsedYears) || parsedYears < 0 || parsedYears > 40) {
-        validationErrors.years_of_experience = 'Doświadczenie musi mieścić się w zakresie 0-40 lat.';
+        validationErrors.experience_years = 'Doświadczenie musi mieścić się w zakresie 0-40 lat.';
       }
     }
 
@@ -288,16 +302,22 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
     setSaving(true);
 
+    const combinedBio = [trimmedHeadline, trimmedAbout].filter(Boolean).join('\n\n');
+    const languagesArray = languages
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+
     const payload = {
-      headline: trimmedHeadline || undefined,
-      about: trimmedAbout || undefined,
-      years_of_experience:
+      bio: combinedBio || undefined,
+      experience_years:
         trimmedYears === ''
           ? undefined
           : Math.max(0, Math.min(40, Math.round(Number(trimmedYears)))) || 0,
       specialization_ids: specializationIds.map(normalizeId),
       training_modes: trainingModes,
       target_group_ids: targetGroupIds.map(normalizeId),
+      languages: languagesArray,
     };
 
     try {
@@ -309,7 +329,10 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się zapisać zmian. Spróbuj ponownie.',
         fieldNameMap: {
-          yearsOfExperience: 'years_of_experience',
+          bio: 'headline',
+          experience_years: 'experience_years',
+          yearsOfExperience: 'experience_years',
+          years_of_experience: 'experience_years',
           specializationIds: 'specialization_ids',
           trainingModes: 'training_modes',
           targetGroupIds: 'target_group_ids',
@@ -421,6 +444,21 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
         </View>
 
         <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Języki</Text>
+          <TextInput
+            value={languages}
+            onChangeText={setLanguages}
+            placeholder="np. polski, angielski"
+            placeholderTextColor={colors.mutedText}
+            style={styles.input}
+            editable={!saving}
+          />
+          {fieldErrors.languages ? (
+            <Text style={styles.errorText}>{fieldErrors.languages}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.fieldGroup}>
           <Text style={styles.label}>Lata doświadczenia</Text>
           <TextInput
             value={yearsOfExperience}
@@ -432,8 +470,10 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
             editable={!saving}
           />
           <Text style={styles.helperText}>Zakres od 0 do 40 lat.</Text>
-          {fieldErrors.years_of_experience ? (
-            <Text style={styles.errorText}>{fieldErrors.years_of_experience}</Text>
+          {fieldErrors.experience_years || fieldErrors.years_of_experience ? (
+            <Text style={styles.errorText}>
+              {fieldErrors.experience_years ?? fieldErrors.years_of_experience}
+            </Text>
           ) : null}
         </View>
 

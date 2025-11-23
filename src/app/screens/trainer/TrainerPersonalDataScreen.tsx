@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,18 +15,20 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../features/auth/AuthContext';
 import { setAuthToken } from '../../../shared/api/httpClient';
-import { getTrainerMe, updateTrainerMe } from '../../../shared/api/trainer.api';
+import {
+  getTrainerPersonalData,
+  updateTrainerPersonalData,
+} from '../../../shared/api/trainer.api';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
 
-type TrainerMeResponse = {
+type TrainerPersonalDataResponse = {
   first_name?: string;
   last_name?: string;
   email?: string;
   phone?: string;
   city?: string;
   country?: string;
-  languages?: string[] | string;
 };
 
 export const TrainerPersonalDataScreen: React.FC = () => {
@@ -43,36 +45,19 @@ export const TrainerPersonalDataScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
-  const [languages, setLanguages] = useState('');
-
   useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
     }
   }, [state.token]);
 
-  const languagesArray = useMemo(
-    () =>
-      languages
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean),
-    [languages],
-  );
-
-  const hydrateForm = useCallback((payload: TrainerMeResponse) => {
+  const hydrateForm = useCallback((payload: TrainerPersonalDataResponse) => {
     setFirstName(payload.first_name ?? '');
     setLastName(payload.last_name ?? '');
     setEmail(payload.email ?? '');
     setPhone(payload.phone ?? '');
     setCity(payload.city ?? '');
     setCountry(payload.country ?? '');
-
-    if (Array.isArray(payload.languages)) {
-      setLanguages(payload.languages.join(', '));
-    } else {
-      setLanguages(payload.languages ?? '');
-    }
   }, []);
 
   const fetchPersonalData = useCallback(async () => {
@@ -80,7 +65,7 @@ export const TrainerPersonalDataScreen: React.FC = () => {
     setBannerError('');
 
     try {
-      const data = await getTrainerMe<TrainerMeResponse>();
+      const data = await getTrainerPersonalData<TrainerPersonalDataResponse>();
       hydrateForm(data);
     } catch (error) {
       const mapped = mapApiError(error, {
@@ -120,11 +105,10 @@ export const TrainerPersonalDataScreen: React.FC = () => {
       phone: phone.trim() || undefined,
       city: city.trim() || undefined,
       country: country.trim() || undefined,
-      languages: languagesArray,
     };
 
     try {
-      await updateTrainerMe(payload);
+      await updateTrainerPersonalData(payload);
       showSuccessToast('Dane zostały zapisane.');
     } catch (error) {
       const mapped = mapApiError(error, {
@@ -244,20 +228,6 @@ export const TrainerPersonalDataScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Języki</Text>
-          <TextInput
-            value={languages}
-            onChangeText={setLanguages}
-            placeholder="polski, angielski"
-            placeholderTextColor={colors.mutedText}
-            style={styles.input}
-            editable={!saving}
-          />
-          {fieldErrors.languages ? (
-            <Text style={styles.errorText}>{fieldErrors.languages}</Text>
-          ) : null}
-        </View>
 
         <Pressable
           style={[styles.button, styles.primaryButton]}

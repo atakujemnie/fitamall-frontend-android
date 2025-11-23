@@ -22,7 +22,7 @@ type TrainerDashboardNavigationProp = NativeStackNavigationProp<
 
 type DashboardResponse = {
   name?: string;
-  status?: string;
+  status?: string | { is_public_trainer?: boolean };
   visibility_status?: string;
   is_public?: boolean;
   profile_completion?: number;
@@ -30,6 +30,7 @@ type DashboardResponse = {
   completion?: number;
   missing_items?: string[];
   missingItems?: string[];
+  personal_data?: { first_name?: string };
 };
 
 const dashboardTiles: Array<{
@@ -112,15 +113,30 @@ export const TrainerDashboardScreen: React.FC = () => {
   );
 
   const isActive = useMemo(() => {
+    if (dashboard?.status && typeof dashboard.status === 'object') {
+      const status = dashboard.status as { is_public_trainer?: boolean };
+
+      if (typeof status.is_public_trainer === 'boolean') {
+        return status.is_public_trainer;
+      }
+    }
+
     if (typeof dashboard?.is_public === 'boolean') {
       return dashboard.is_public;
     }
 
     const normalizedStatus =
-      dashboard?.status?.toUpperCase() ?? dashboard?.visibility_status?.toUpperCase() ?? '';
+      (typeof dashboard?.status === 'string' ? dashboard.status : undefined)?.toUpperCase() ??
+      dashboard?.visibility_status?.toUpperCase() ??
+      '';
 
-    return normalizedStatus === 'ACTIVE' || normalizedStatus === 'PUBLIC';
+    return normalizedStatus === 'ACTIVE' || normalizedStatus === 'PUBLIC' || normalizedStatus === 'VISIBLE';
   }, [dashboard]);
+
+  const greetingName = useMemo(
+    () => (dashboard as any)?.personal_data?.first_name ?? dashboard?.name ?? 'Trenerze',
+    [dashboard],
+  );
 
   const statusLabel = isActive ? 'Profil aktywny' : 'Profil ukryty';
   const statusDescription = isActive
@@ -133,7 +149,7 @@ export const TrainerDashboardScreen: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.titleColumn}>
-              <Text style={styles.title}>Cześć, {dashboard?.name ?? 'Trenerze'}!</Text>
+              <Text style={styles.title}>Cześć, {greetingName}!</Text>
               <Text style={styles.subtitle}>
                 Sprawdź status swojej wizytówki i uzupełnij brakujące informacje, aby skuteczniej
                 docierać do klientów.

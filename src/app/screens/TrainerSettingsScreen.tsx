@@ -18,8 +18,9 @@ import { useAuth } from '../../features/auth/AuthContext';
 import { setAuthToken } from '../../shared/api/httpClient';
 import {
   changeTrainerPassword,
+  getTrainerConsents,
   getTrainerDashboard,
-  getTrainerMe,
+  getTrainerPersonalData,
   getTrainerProfile,
   updateTrainerConsents,
   updateTrainerStatus,
@@ -39,12 +40,14 @@ interface TrainerDashboardResponse {
   emailNotifications?: unknown;
   marketing_consent?: unknown;
   marketingConsent?: unknown;
+  is_public_trainer?: unknown;
   is_visible?: unknown;
   isVisible?: unknown;
   visibility_status?: unknown;
   can_accept_clients?: unknown;
   canAcceptClients?: unknown;
   accepting_clients?: unknown;
+  accepting_new_clients?: unknown;
   status?: unknown;
 }
 
@@ -60,19 +63,27 @@ interface TrainerProfileResponse {
   emailNotifications?: unknown;
   marketing_consent?: unknown;
   marketingConsent?: unknown;
+  is_public_trainer?: unknown;
   is_visible?: unknown;
   isVisible?: unknown;
   visibility_status?: unknown;
   can_accept_clients?: unknown;
   canAcceptClients?: unknown;
   accepting_clients?: unknown;
+  accepting_new_clients?: unknown;
   status?: unknown;
 }
 
-interface TrainerMeResponse {
+interface TrainerPersonalDataResponse {
   email?: string;
   contact_email?: string;
   contactEmail?: string;
+}
+
+interface ConsentsResponse {
+  notifications_push?: boolean;
+  notifications_email?: boolean;
+  marketing_consent?: boolean;
 }
 
 const normalizeBoolean = (value: unknown): boolean | undefined => {
@@ -210,32 +221,55 @@ export const TrainerSettingsScreen: React.FC = () => {
     (
       dashboard: TrainerDashboardResponse | null,
       profile: TrainerProfileResponse | null,
-      me: TrainerMeResponse | null,
+      personalData: TrainerPersonalDataResponse | null,
+      consents: ConsentsResponse | null,
     ) => {
-      const sources = [dashboard as Record<string, unknown> | null, profile as Record<string, unknown> | null];
-      const emailSources = [...sources, me as Record<string, unknown> | null];
+      const statusSource =
+        dashboard?.status && typeof dashboard.status === 'object'
+          ? (dashboard.status as Record<string, unknown>)
+          : null;
+      const sources = [
+        statusSource,
+        dashboard as Record<string, unknown> | null,
+        profile as Record<string, unknown> | null,
+      ];
+      const emailSources = [...sources, personalData as Record<string, unknown> | null];
 
       setPushConsent(
-        getBooleanFromSources(sources, ['push_notifications', 'pushNotifications', 'push_notifications_enabled'], false),
+        consents?.notifications_push ??
+          getBooleanFromSources(
+            sources,
+            ['notifications_push', 'push_notifications', 'pushNotifications', 'push_notifications_enabled'],
+            false,
+          ),
       );
       setEmailConsent(
-        getBooleanFromSources(sources, ['email_notifications', 'emailNotifications'], false),
+        consents?.notifications_email ??
+          getBooleanFromSources(sources, ['notifications_email', 'email_notifications', 'emailNotifications'], false),
       );
       setMarketingConsent(
-        getBooleanFromSources(sources, ['marketing_consent', 'marketingConsent', 'marketing'], false),
+        consents?.marketing_consent ??
+          getBooleanFromSources(sources, ['marketing_consent', 'marketingConsent', 'marketing'], false),
       );
 
       setIsVisible(
         getBooleanFromSources(
           sources,
-          ['is_visible', 'isVisible', 'visibility_status', 'status', 'visible'],
+          [
+            'is_public_trainer',
+            'is_visible',
+            'isVisible',
+            'visibility_status',
+            'status',
+            'visible',
+          ],
           false,
         ),
       );
       setCanAcceptClients(
         getBooleanFromSources(
           sources,
-          ['can_accept_clients', 'canAcceptClients', 'accepting_clients'],
+          ['accepting_new_clients', 'can_accept_clients', 'canAcceptClients', 'accepting_clients'],
           false,
         ),
       );
@@ -252,13 +286,14 @@ export const TrainerSettingsScreen: React.FC = () => {
     setLoadingError('');
 
     try {
-      const [dashboard, profile, me] = await Promise.all([
+      const [dashboard, profile, personalData, consentsData] = await Promise.all([
         getTrainerDashboard<TrainerDashboardResponse>(),
         getTrainerProfile<TrainerProfileResponse>(),
-        getTrainerMe<TrainerMeResponse>(),
+        getTrainerPersonalData<TrainerPersonalDataResponse>(),
+        getTrainerConsents<ConsentsResponse>(),
       ]);
 
-      hydrateFromPayloads(dashboard, profile, me);
+      hydrateFromPayloads(dashboard, profile, personalData, consentsData);
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się pobrać ustawień. Spróbuj ponownie.',
@@ -337,9 +372,9 @@ export const TrainerSettingsScreen: React.FC = () => {
 
     try {
       await updateTrainerConsents({
-        push: nextState.push,
-        email: nextState.email,
-        marketing: nextState.marketing,
+        notifications_push: nextState.push,
+        notifications_email: nextState.email,
+        marketing_consent: nextState.marketing,
       });
     } catch (error) {
       setPushConsent(previousState.push);
@@ -356,34 +391,39 @@ export const TrainerSettingsScreen: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (update: Partial<{ is_visible: boolean; can_accept_clients: boolean }>) => {
+  const handleStatusUpdate = async (
+    update: Partial<{ is_public_trainer: boolean; accepting_new_clients: boolean }>,
+  ) => {
     setStatusError('');
     setStatusFieldErrors({});
     setStatusSaving(true);
 
-    const previousState = { is_visible: isVisible, can_accept_clients: canAcceptClients };
+    const previousState = {
+      is_public_trainer: isVisible,
+      accepting_new_clients: canAcceptClients,
+    };
     const nextState = {
-      is_visible: update.is_visible ?? isVisible,
-      can_accept_clients: update.can_accept_clients ?? canAcceptClients,
+      is_public_trainer: update.is_public_trainer ?? isVisible,
+      accepting_new_clients: update.accepting_new_clients ?? canAcceptClients,
     };
 
-    setIsVisible(nextState.is_visible);
-    setCanAcceptClients(nextState.can_accept_clients);
+    setIsVisible(nextState.is_public_trainer);
+    setCanAcceptClients(nextState.accepting_new_clients);
 
     try {
       await updateTrainerStatus({
-        is_visible: nextState.is_visible,
-        can_accept_clients: nextState.can_accept_clients,
+        is_public_trainer: nextState.is_public_trainer,
+        accepting_new_clients: nextState.accepting_new_clients,
       });
     } catch (error) {
-      setIsVisible(previousState.is_visible);
-      setCanAcceptClients(previousState.can_accept_clients);
+      setIsVisible(previousState.is_public_trainer);
+      setCanAcceptClients(previousState.accepting_new_clients);
 
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się zaktualizować statusu. Spróbuj ponownie.',
         fieldNameMap: {
-          is_visible: 'isVisible',
-          can_accept_clients: 'canAcceptClients',
+          is_public_trainer: 'isVisible',
+          accepting_new_clients: 'canAcceptClients',
         },
       });
 
@@ -591,7 +631,7 @@ export const TrainerSettingsScreen: React.FC = () => {
                 </View>
                 <Switch
                   value={isVisible}
-                  onValueChange={value => handleStatusUpdate({ is_visible: value })}
+                  onValueChange={value => handleStatusUpdate({ is_public_trainer: value })}
                   trackColor={{ true: colors.primary, false: colors.border }}
                   thumbColor={isVisible ? colors.primary : '#f4f3f4'}
                   disabled={statusSaving}
@@ -608,7 +648,7 @@ export const TrainerSettingsScreen: React.FC = () => {
                 </View>
                 <Switch
                   value={canAcceptClients}
-                  onValueChange={value => handleStatusUpdate({ can_accept_clients: value })}
+                  onValueChange={value => handleStatusUpdate({ accepting_new_clients: value })}
                   trackColor={{ true: colors.primary, false: colors.border }}
                   thumbColor={canAcceptClients ? colors.primary : '#f4f3f4'}
                   disabled={statusSaving}
