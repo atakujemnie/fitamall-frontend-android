@@ -1,26 +1,105 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigatorScreenParams } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '../screens/HomeScreen';
 import { colors } from '../../shared/theme';
 import { FindTrainerScreen } from '../screens/FindTrainerScreen';
+import { useAuth } from '../../features/auth/AuthContext';
+import { TrainerDashboardScreen } from '../screens/trainer/TrainerDashboardScreen';
+import { TrainerPersonalDataScreen } from '../screens/trainer/TrainerPersonalDataScreen';
+import { TrainerProfessionalProfileScreen } from '../screens/trainer/TrainerProfessionalProfileScreen';
+import { TrainerPhotosScreen } from '../screens/trainer/TrainerPhotosScreen';
+import { TrainerSettingsScreen } from '../screens/trainer/TrainerSettingsScreen';
 
-export type AppStackParamList = {
+export type MainStackParamList = {
   Home: undefined;
   FindTrainer: undefined;
 };
 
-const Stack = createNativeStackNavigator<AppStackParamList>();
+export type TrainerStackParamList = {
+  TrainerDashboard: undefined;
+  TrainerPersonalData: undefined;
+  TrainerProfessionalProfile: undefined;
+  TrainerPhotos: undefined;
+  TrainerSettings: undefined;
+};
+
+export type AppTabParamList = {
+  Main: NavigatorScreenParams<MainStackParamList>;
+  Trainer: NavigatorScreenParams<TrainerStackParamList>;
+};
+
+const MainStack = createNativeStackNavigator<MainStackParamList>();
+const TrainerStack = createNativeStackNavigator<TrainerStackParamList>();
+const Tab = createBottomTabNavigator<AppTabParamList>();
+
+const MainStackNavigator: React.FC = () => (
+  <MainStack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.text,
+    }}
+  >
+    <MainStack.Screen name="Home" component={HomeScreen} />
+    <MainStack.Screen name="FindTrainer" component={FindTrainerScreen} />
+  </MainStack.Navigator>
+);
+
+const TrainerStackNavigator: React.FC = () => (
+  <TrainerStack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.text,
+    }}
+  >
+    <TrainerStack.Screen
+      name="TrainerDashboard"
+      component={TrainerDashboardScreen}
+      options={{ title: 'Panel trenera' }}
+    />
+    <TrainerStack.Screen
+      name="TrainerPersonalData"
+      component={TrainerPersonalDataScreen}
+      options={{ title: 'Dane osobowe' }}
+    />
+    <TrainerStack.Screen
+      name="TrainerProfessionalProfile"
+      component={TrainerProfessionalProfileScreen}
+      options={{ title: 'Profil zawodowy' }}
+    />
+    <TrainerStack.Screen
+      name="TrainerPhotos"
+      component={TrainerPhotosScreen}
+      options={{ title: 'Zdjęcia' }}
+    />
+    <TrainerStack.Screen
+      name="TrainerSettings"
+      component={TrainerSettingsScreen}
+      options={{ title: 'Ustawienia' }}
+    />
+  </TrainerStack.Navigator>
+);
 
 export const AppNavigator: React.FC = () => {
+  const { state } = useAuth();
+  const isTrainer = state.user?.roles?.includes('TRAINER');
+
+  if (!isTrainer) {
+    return <MainStackNavigator />;
+  }
+
   return (
-    <Stack.Navigator
+    <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedText,
+        tabBarStyle: { backgroundColor: colors.surface },
       }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="FindTrainer" component={FindTrainerScreen} />
-    </Stack.Navigator>
+      <Tab.Screen name="Main" component={MainStackNavigator} options={{ title: 'Aplikacja' }} />
+      <Tab.Screen name="Trainer" component={TrainerStackNavigator} options={{ title: 'Trener' }} />
+    </Tab.Navigator>
   );
 };
