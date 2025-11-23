@@ -30,6 +30,7 @@ type DashboardResponse = {
   completion?: number;
   missing_items?: string[];
   missingItems?: string[];
+  missing_fields?: { personal_data?: string[]; profile?: string[] } | string[];
   personal_data?: { first_name?: string };
 };
 
@@ -107,10 +108,30 @@ export const TrainerDashboardScreen: React.FC = () => {
     return Math.max(0, Math.min(100, Math.round(rawCompletion)));
   }, [dashboard]);
 
-  const missingItems = useMemo(
-    () => dashboard?.missing_items ?? dashboard?.missingItems ?? [],
-    [dashboard],
-  );
+  const missingItems = useMemo(() => {
+    const missingFromItems = dashboard?.missing_items ?? dashboard?.missingItems;
+
+    if (Array.isArray(missingFromItems)) {
+      return missingFromItems;
+    }
+
+    const missingFields = (dashboard as any)?.missing_fields ?? (dashboard as any)?.missingFields;
+
+    if (Array.isArray(missingFields)) {
+      return missingFields;
+    }
+
+    if (missingFields && typeof missingFields === 'object') {
+      const personalData = Array.isArray(missingFields.personal_data)
+        ? missingFields.personal_data
+        : [];
+      const profile = Array.isArray(missingFields.profile) ? missingFields.profile : [];
+
+      return [...personalData, ...profile];
+    }
+
+    return [];
+  }, [dashboard]);
 
   const isActive = useMemo(() => {
     if (dashboard?.status && typeof dashboard.status === 'object') {
