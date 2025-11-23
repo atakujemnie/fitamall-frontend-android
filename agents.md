@@ -1,5 +1,7 @@
 # agents.md
 
+Lista endpointów wraz z przykadami - patrz plik contracts_api.json
+
 ## Ustalenie dot. frontu mobilnego
 
 * Projekt wykorzystuje **React Native** jako jeden wspólny front aplikacji mobilnej.
