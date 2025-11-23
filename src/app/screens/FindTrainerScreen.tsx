@@ -1,94 +1,83 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
 import { colors, spacing } from '../../shared/theme';
 import {
-  getTrainerFilters,
+  getTrainerCities,
   getTrainersByCity,
-  TrainerFiltersResponse,
   TrainerListItem,
 } from '../../shared/api/trainers.api';
 
 export const FindTrainerScreen: React.FC = () => {
-  const [filters, setFilters] = useState<TrainerFiltersResponse | null>(null);
+  const [cities, setCities] = useState<string[]>([]);
   const [selectedCity, setSelectedCity] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isCityModalVisible, setCityModalVisible] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(true);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
-  const [isTrainersLoading, setIsTrainersLoading] = useState(false);
   const [trainersError, setTrainersError] = useState<string | null>(null);
+  const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadFilters = async () => {
-      setIsLoading(true);
+    const loadCities = async () => {
+      setLoadingCities(true);
       setError(null);
 
       try {
-        const response = await getTrainerFilters();
+        const response = await getTrainerCities();
 
         if (isMounted) {
-          setFilters(response);
+          setCities(response);
         }
       } catch (err) {
         if (isMounted) {
-          setError('Nie udało się wczytać filtrów trenerów. Spróbuj ponownie później.');
+          setError('Nie udało się wczytać miast. Spróbuj ponownie później.');
         }
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setLoadingCities(false);
         }
       }
     };
 
-    loadFilters();
+    loadCities();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
+  const handleSelectCity = async (city: string) => {
+    setSelectedCity(city);
+    setCityModalVisible(false);
+    await loadTrainers(city);
+  };
 
-    const loadTrainers = async () => {
-      if (!selectedCity) {
-        setTrainers([]);
-        setTrainersError(null);
-        return;
-      }
+  const loadTrainers = async (city: string) => {
+    setLoadingTrainers(true);
+    setTrainersError(null);
+    setTrainers([]);
 
-      setIsTrainersLoading(true);
-      setTrainersError(null);
-      setTrainers([]);
+    try {
+      const response = await getTrainersByCity(city);
 
-      try {
-        const response = await getTrainersByCity(selectedCity);
-
-        if (isMounted) {
-          setTrainers(response);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setTrainersError('Nie udało się wczytać trenerów. Spróbuj ponownie później.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsTrainersLoading(false);
-        }
-      }
-    };
-
-    loadTrainers();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCity]);
-
-  const cities = filters?.cities ?? [];
+      setTrainers(response);
+    } catch (err) {
+      setTrainersError('Nie udało się wczytać trenerów. Spróbuj ponownie później.');
+    } finally {
+      setLoadingTrainers(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -102,7 +91,7 @@ export const FindTrainerScreen: React.FC = () => {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Miasto</Text>
 
-        {isLoading ? (
+        {loadingCities ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.metaText}>Wczytuję dostępne miasta...</Text>
@@ -110,17 +99,14 @@ export const FindTrainerScreen: React.FC = () => {
         ) : error ? (
           <Text style={[styles.metaText, styles.errorText]}>{error}</Text>
         ) : (
-          <Picker
-            selectedValue={selectedCity}
-            onValueChange={value => setSelectedCity(String(value))}
-            dropdownIconColor={colors.text}
-            style={styles.picker}
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={selectedCity ? `Wybrane miasto ${selectedCity}` : 'Wybierz miasto'}
+            style={styles.selector}
+            onPress={() => setCityModalVisible(true)}
           >
-            <Picker.Item label="Wybierz miasto" value="" enabled={false} />
-            {cities.map(city => (
-              <Picker.Item key={city} label={city} value={city} />
-            ))}
-          </Picker>
+            <Text style={styles.selectorText}>{selectedCity || 'Wybierz miasto'}</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -128,7 +114,7 @@ export const FindTrainerScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Dostępni trenerzy</Text>
         {!selectedCity ? (
           <Text style={styles.metaText}>Wybierz miasto, aby zobaczyć listę trenerów.</Text>
-        ) : isTrainersLoading ? (
+        ) : loadingTrainers ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.metaText}>Wczytuję listę trenerów...</Text>
@@ -136,7 +122,7 @@ export const FindTrainerScreen: React.FC = () => {
         ) : trainersError ? (
           <Text style={[styles.metaText, styles.errorText]}>{trainersError}</Text>
         ) : trainers.length === 0 ? (
-          <Text style={styles.metaText}>Brak trenerów w wybranym mieście.</Text>
+          <Text style={styles.metaText}>Brak trenerów w tym mieście.</Text>
         ) : (
           <FlatList
             data={trainers}
@@ -153,6 +139,55 @@ export const FindTrainerScreen: React.FC = () => {
           />
         )}
       </View>
+
+      <Modal
+        visible={isCityModalVisible}
+        animationType="slide"
+        onRequestClose={() => setCityModalVisible(false)}
+        transparent={false}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Wybierz miasto</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Zamknij wybór miasta"
+              style={styles.closeButton}
+              onPress={() => setCityModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Zamknij</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingCities ? (
+            <View style={[styles.loadingRow, styles.modalContentPadding]}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.metaText}>Wczytuję dostępne miasta...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.modalContentPadding}>
+              <Text style={[styles.metaText, styles.errorText]}>{error}</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={cities}
+              keyExtractor={item => item}
+              contentContainerStyle={styles.modalContentPadding}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`Wybierz miasto ${item}`}
+                  style={styles.cityItem}
+                  onPress={() => handleSelectCity(item)}
+                >
+                  <Text style={styles.cityName}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -202,9 +237,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  picker: {
+  selector: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.background,
+  },
+  selectorText: {
     color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
   trainerItem: {
     paddingVertical: spacing.xs,
@@ -219,5 +263,48 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.xs,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  closeButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  closeButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalContentPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  cityItem: {
+    paddingVertical: spacing.md,
+  },
+  cityName: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

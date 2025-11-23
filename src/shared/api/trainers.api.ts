@@ -21,10 +21,10 @@ export const getTrainerStats = async (): Promise<TrainerStatsResponse> => {
   return response.data;
 };
 
-export const getTrainerFilters = async (): Promise<TrainerFiltersResponse> => {
+export const getTrainerCities = async (): Promise<string[]> => {
   const response = await httpClient.get<TrainerFiltersResponse>('/api/trainers/filters');
 
-  return response.data;
+  return response.data.cities;
 };
 
 export const getTrainersByCity = async (city: string): Promise<TrainerListItem[]> => {
