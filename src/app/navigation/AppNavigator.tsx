@@ -83,7 +83,10 @@ const TrainerStackNavigator: React.FC = () => (
 
 export const AppNavigator: React.FC = () => {
   const { state } = useAuth();
-  const isTrainer = state.user?.roles?.includes('TRAINER');
+  const normalizedRoles = state.user?.roles?.map(role => role.toUpperCase()) ?? [];
+  const hasTrainerRole = normalizedRoles.includes('TRAINER') || normalizedRoles.includes('PROVIDER_OWNER');
+  const hasServiceProviderProfile = (state.serviceProviders ?? []).length > 0;
+  const isTrainer = hasTrainerRole || hasServiceProviderProfile;
 
   if (!isTrainer) {
     return <MainStackNavigator />;
