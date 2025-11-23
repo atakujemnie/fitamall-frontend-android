@@ -59,6 +59,12 @@ const extractToken = (token: AuthToken): string => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(initialState);
 
+  const clearSession = useCallback(async () => {
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    setAuthToken();
+    setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+  }, []);
+
   const persistTokenAndFetchUser = useCallback(async (token: AuthToken) => {
     const tokenValue = extractToken(token);
 
@@ -78,22 +84,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return me.user;
     } catch (error) {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-      setAuthToken();
-      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+      await clearSession();
       throw error;
     }
-  }, []);
+  }, [clearSession]);
 
   const logout = useCallback(async () => {
     try {
       await logoutRequest();
     } finally {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-      setAuthToken();
-      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+      await clearSession();
     }
-  }, []);
+  }, [clearSession]);
 
   const login = useCallback(
     async (payload: LoginRequest) => {
@@ -159,8 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
 
         if (!storedToken) {
-          setAuthToken();
-          setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+          await clearSession();
           return;
         }
 
@@ -174,25 +175,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           serviceProviders: me.service_providers ?? [],
         });
       } catch (error) {
-        await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-        setAuthToken();
-        setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+        await clearSession();
       }
     };
 
     bootstrapAuth();
-  }, []);
+  }, [clearSession]);
 
   useEffect(() => {
     setUnauthorizedHandler(async () => {
       logDebug('Authentication token rejected; clearing session');
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-      setAuthToken();
-      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+      await clearSession();
     });
 
     return () => setUnauthorizedHandler();
-  }, []);
+  }, [clearSession]);
 
   const contextValue = useMemo<AuthContextValue>(
     () => ({
