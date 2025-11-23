@@ -57,12 +57,6 @@ export const FindTrainerScreen: React.FC = () => {
     };
   }, []);
 
-  const handleSelectCity = async (city: string) => {
-    setSelectedCity(city);
-    setCityModalVisible(false);
-    await loadTrainers(city);
-  };
-
   const loadTrainers = async (city: string) => {
     setLoadingTrainers(true);
     setTrainersError(null);
@@ -77,6 +71,12 @@ export const FindTrainerScreen: React.FC = () => {
     } finally {
       setLoadingTrainers(false);
     }
+  };
+
+  const handleSelectCity = async (city: string) => {
+    setSelectedCity(city);
+    setCityModalVisible(false);
+    await loadTrainers(city);
   };
 
   return (

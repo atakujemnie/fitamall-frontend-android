@@ -9,7 +9,7 @@ export interface TrainerFiltersResponse {
 }
 
 export interface TrainerListItem {
-  id?: string;
+  id?: string | number;
   first_name: string;
   last_name: string;
   city: string;
