@@ -101,7 +101,7 @@ export const updateTrainerConsents = async <T = unknown, P = unknown>(
   payload: P,
 ): Promise<T> =>
   handleRequest(() =>
-    httpClient.put<T>(`${TRAINER_BASE_PATH}/consents`, payload),
+    httpClient.put<T>(`${TRAINER_BASE_PATH}/settings/consents`, payload),
   );
 
 export const updateTrainerStatus = async <T = unknown, P = unknown>(
