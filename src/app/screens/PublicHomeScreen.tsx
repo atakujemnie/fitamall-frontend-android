@@ -73,16 +73,24 @@ export const PublicHomeScreen: React.FC = () => {
         <View style={styles.actionsCard}>
           <Text style={styles.sectionTitle}>Dołącz teraz</Text>
           <Text style={styles.metaText}>Zaloguj się, aby kontynuować, lub utwórz nowe konto.</Text>
-          <View style={styles.actionsRow}>
+          <View style={styles.actionsColumn}>
             <Pressable style={[styles.ctaButton, styles.primaryButton]} onPress={() => navigation.navigate('Login')}>
               <Text style={styles.ctaText}>Zaloguj</Text>
             </Pressable>
-            <Pressable
-              style={[styles.ctaButton, styles.secondaryButton]}
-              onPress={() => navigation.navigate('RegisterClient')}
-            >
-              <Text style={styles.secondaryText}>Rejestracja</Text>
-            </Pressable>
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={[styles.ctaButton, styles.secondaryButton]}
+                onPress={() => navigation.navigate('RegisterClient')}
+              >
+                <Text style={styles.secondaryText}>Rejestracja klienta</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.ctaButton, styles.secondaryButton]}
+                onPress={() => navigation.navigate('RegisterProvider')}
+              >
+                <Text style={styles.secondaryText}>Rejestracja trenera</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -170,10 +178,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '700',
   },
+  actionsColumn: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   actionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   ctaButton: {
     flex: 1,
