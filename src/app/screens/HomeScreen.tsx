@@ -40,7 +40,7 @@ export const HomeScreen: React.FC = () => {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             renderItem={({ item }) => (
               <View style={styles.providerRow}>
-                <Text style={styles.providerName}>{item.company_name ?? item.name}</Text>
+                <Text style={styles.providerName}>{item.provider_name ?? item.name}</Text>
                 {item.description ? (
                   <Text style={styles.metaText}>{item.description}</Text>
                 ) : null}

@@ -74,16 +74,17 @@ export const RegisterProviderScreen: React.FC = () => {
       return;
     }
 
-    const address = [city.trim(), country.trim()].filter(Boolean).join(', ');
-
     const payload: RegisterProviderRequest = {
-      name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       email: email.trim(),
       password,
       password_confirmation: passwordConfirmation,
-      company_name: providerName.trim(),
+      provider_name: providerName.trim(),
+      city: city.trim() || undefined,
+      country: country.trim() || undefined,
       description: description.trim() || undefined,
-      address: address || undefined,
+      channel: 'mobile',
     };
 
     setSubmitting(true);
@@ -93,7 +94,6 @@ export const RegisterProviderScreen: React.FC = () => {
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Could not create your provider account. Please try again.',
-        fieldNameMap: { name: 'first_name', company_name: 'provider_name' },
       });
 
       if (mapped.fieldErrors) {

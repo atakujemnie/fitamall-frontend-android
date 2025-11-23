@@ -12,7 +12,7 @@ import {
 } from './auth.types';
 
 const AUTH_CHANNEL = 'mobile';
-const DEFAULT_DEVICE_NAME = 'mobile';
+const DEFAULT_DEVICE_NAME = 'fitamall-mobile';
 const AUTH_BASE_PATH = '/api/auth';
 
 type RequestExecutor<T> = () => Promise<AxiosResponse<T>>;

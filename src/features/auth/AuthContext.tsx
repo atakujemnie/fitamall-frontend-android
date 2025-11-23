@@ -28,12 +28,14 @@ interface AuthContextValue {
   state: AuthState;
   registerClient: (form: RegisterClientRequest) => Promise<AuthUser>;
   registerProvider: (form: RegisterProviderRequest) => Promise<AuthUser>;
-  login: (email: string, password: string, deviceName?: string) => Promise<AuthUser>;
+  login: (payload: LoginRequest) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<AuthUser>;
 }
 
 const AUTH_TOKEN_KEY = '@fitamall/auth_token';
+const AUTH_CHANNEL: RegisterClientRequest['channel'] = 'mobile';
+const DEFAULT_DEVICE_NAME = 'fitamall-mobile';
 
 const initialState: AuthState = {
   status: 'checking',
@@ -94,9 +96,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string, deviceName = 'fitamall-mobile') => {
-      const payload: LoginRequest = { email, password, device_name: deviceName };
-      const response = await loginRequest(payload);
+    async (payload: LoginRequest) => {
+      const requestPayload: LoginRequest = {
+        ...payload,
+        channel: AUTH_CHANNEL,
+        device_name: payload.device_name ?? DEFAULT_DEVICE_NAME,
+      };
+      const response = await loginRequest(requestPayload);
 
       return persistTokenAndFetchUser(response.token);
     },
@@ -105,7 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerClient = useCallback(
     async (form: RegisterClientRequest) => {
-      const response = await registerClientRequest(form);
+      const payload: RegisterClientRequest = {
+        ...form,
+        channel: AUTH_CHANNEL,
+      };
+      const response = await registerClientRequest(payload);
 
       return persistTokenAndFetchUser(response.token);
     },
@@ -114,7 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerProvider = useCallback(
     async (form: RegisterProviderRequest) => {
-      const response = await registerProviderRequest(form);
+      const payload: RegisterProviderRequest = {
+        ...form,
+        channel: AUTH_CHANNEL,
+      };
+      const response = await registerProviderRequest(payload);
 
       return persistTokenAndFetchUser(response.token);
     },

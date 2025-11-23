@@ -68,10 +68,12 @@ export const RegisterClientScreen: React.FC = () => {
     }
 
     const payload: RegisterClientRequest = {
-      name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       email: email.trim(),
       password,
       password_confirmation: passwordConfirmation,
+      channel: 'mobile',
     };
 
     setSubmitting(true);
@@ -81,7 +83,6 @@ export const RegisterClientScreen: React.FC = () => {
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Could not create your account. Please try again.',
-        fieldNameMap: { name: 'first_name' },
       });
 
       if (mapped.fieldErrors) {
