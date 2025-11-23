@@ -26,6 +26,7 @@ const handleRequest = async <T>(executor: RequestExecutor<T>): Promise<T> => {
 };
 
 const TRAINER_BASE_PATH = '/api/trainer';
+const TRAINER_ME_PATH = '/api/trainer/me';
 
 export const getTrainerDashboard = async <T = unknown>(): Promise<T> =>
   handleRequest(() => httpClient.get<T>(`${TRAINER_BASE_PATH}/dashboard`));
@@ -47,6 +48,12 @@ export const updateTrainerProfile = async <T = unknown, P = unknown>(
   payload: P,
 ): Promise<T> =>
   handleRequest(() => httpClient.put<T>(`${TRAINER_BASE_PATH}/profile`, payload));
+
+export const getTrainerMe = async <T = unknown>(): Promise<T> =>
+  handleRequest(() => httpClient.get<T>(TRAINER_ME_PATH));
+
+export const updateTrainerMe = async <T = unknown, P = unknown>(payload: P): Promise<T> =>
+  handleRequest(() => httpClient.put<T>(TRAINER_ME_PATH, payload));
 
 export const uploadTrainerAvatar = async <T = unknown>(
   formData: FormData,
