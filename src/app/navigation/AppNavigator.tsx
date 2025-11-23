@@ -10,7 +10,7 @@ import { TrainerDashboardScreen } from '../screens/TrainerDashboardScreen';
 import { TrainerPersonalDataScreen } from '../screens/trainer/TrainerPersonalDataScreen';
 import { TrainerProfessionalProfileScreen } from '../screens/trainer/TrainerProfessionalProfileScreen';
 import { TrainerPhotosScreen } from '../screens/trainer/TrainerPhotosScreen';
-import { TrainerSettingsScreen } from '../screens/trainer/TrainerSettingsScreen';
+import { TrainerSettingsScreen } from '../screens/TrainerSettingsScreen';
 
 export type MainStackParamList = {
   Home: undefined;
