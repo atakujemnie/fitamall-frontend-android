@@ -17,6 +17,7 @@ export interface ServiceProvider extends User {
 
 export interface AuthToken {
   token: string;
+  plain_text?: string;
   token_type?: string;
   expires_at?: string;
 }

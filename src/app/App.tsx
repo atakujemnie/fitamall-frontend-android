@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
 import { RootNavigator } from './navigation/RootNavigator';
 import { colors } from '../shared/theme';
+import { AuthProvider } from '../features/auth/AuthContext';
 
 enableScreens();
 
@@ -22,10 +23,11 @@ const navigationTheme: NavigationTheme = {
 const App: React.FC = () => {
   return (
     <SafeAreaProvider>
-      {/* Auth provider will be added here when authentication is implemented. */}
-      <NavigationContainer theme={navigationTheme}>
-        <RootNavigator />
-      </NavigationContainer>
+      <AuthProvider>
+        <NavigationContainer theme={navigationTheme}>
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 };
