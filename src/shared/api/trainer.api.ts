@@ -4,10 +4,24 @@ import { ValidationErrorResponse } from './auth.types';
 
 type RequestExecutor<T> = () => Promise<AxiosResponse<T>>;
 
+const flattenResourcePayload = <T>(payload: unknown): T => {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const envelope = payload as Record<string, unknown>;
+
+    if (envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)) {
+      const { data, ...rest } = envelope;
+
+      return { ...(rest as Record<string, unknown>), ...(data as Record<string, unknown>) } as T;
+    }
+  }
+
+  return payload as T;
+};
+
 const handleRequest = async <T>(executor: RequestExecutor<T>): Promise<T> => {
   try {
     const response = await executor();
-    return response.data;
+    return flattenResourcePayload<T>(response.data);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
