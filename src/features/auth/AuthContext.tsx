@@ -27,7 +27,7 @@ interface AuthContextValue {
   state: AuthState;
   registerClient: (form: RegisterClientRequest) => Promise<AuthUser>;
   registerProvider: (form: RegisterProviderRequest) => Promise<AuthUser>;
-  login: (email: string, password: string) => Promise<AuthUser>;
+  login: (email: string, password: string, deviceName?: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<AuthUser>;
 }
@@ -91,8 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      const payload: LoginRequest = { email, password };
+    async (email: string, password: string, deviceName = 'fitamall-mobile') => {
+      const payload: LoginRequest = { email, password, device_name: deviceName };
       const response = await loginRequest(payload);
 
       return persistTokenAndFetchUser(response.token);

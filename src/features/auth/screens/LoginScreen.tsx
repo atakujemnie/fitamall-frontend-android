@@ -1,15 +1,178 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import axios from 'axios';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
+import { useAuth } from '../AuthContext';
+import { ValidationErrorResponse } from '../../../shared/api/auth.types';
 import { colors, spacing } from '../../../shared/theme';
 
+const isValidationError = (error: unknown): error is ValidationErrorResponse =>
+  typeof error === 'object' && !!error && 'errors' in error;
+
 export const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [bannerError, setBannerError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const isValidEmail = useMemo(() => /\S+@\S+\.\S+/, []);
+
+  const validate = () => {
+    const errors: Record<string, string> = {};
+
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!isValidEmail.test(email.trim())) {
+      errors.email = 'Enter a valid email address';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleValidationError = (error: ValidationErrorResponse) => {
+    const errors: Record<string, string> = {};
+
+    Object.entries(error.errors ?? {}).forEach(([field, messages]) => {
+      if (messages && messages.length > 0) {
+        errors[field] = messages[0];
+      }
+    });
+
+    setFieldErrors(prev => ({ ...prev, ...errors }));
+
+    if (!Object.keys(errors).length && error.message) {
+      setBannerError(error.message);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setBannerError('');
+    setFieldErrors({});
+
+    if (!validate()) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await login(email.trim(), password, 'fitamall-mobile');
+    } catch (error) {
+      if (isValidationError(error)) {
+        handleValidationError(error);
+        setSubmitting(false);
+        return;
+      }
+
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 403 &&
+        error.response?.data?.message === 'User is not active.'
+      ) {
+        setBannerError('User is not active.');
+      } else if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 422 &&
+        error.response?.data?.message === 'Invalid credentials.'
+      ) {
+        setBannerError('Invalid credentials.');
+      } else {
+        setBannerError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Login</Text>
         <Text style={styles.subtitle}>Authenticate to access your account.</Text>
-      </View>
+
+        {bannerError ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{bannerError}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            placeholder="you@example.com"
+            placeholderTextColor={colors.mutedText}
+            style={styles.input}
+            editable={!submitting}
+          />
+          {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+            placeholderTextColor={colors.mutedText}
+            secureTextEntry
+            style={styles.input}
+            editable={!submitting}
+          />
+          {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, submitting && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.text} />
+          ) : (
+            <Text style={styles.buttonText}>Log in</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.linksRow}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('RegisterClient')}
+            disabled={submitting}
+          >
+            <Text style={styles.linkText}>Create client account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('RegisterProvider')}
+            disabled={submitting}
+          >
+            <Text style={styles.linkText}>Create trainer account</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -20,20 +183,70 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexGrow: 1,
     padding: spacing.lg,
+    gap: spacing.md,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: spacing.sm,
   },
   subtitle: {
     color: colors.mutedText,
     fontSize: 16,
-    textAlign: 'center',
+  },
+  fieldGroup: {
+    marginTop: spacing.sm,
+  },
+  label: {
+    color: colors.text,
+    marginBottom: spacing.xs,
+    fontWeight: '600',
+  },
+  input: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+  },
+  errorText: {
+    color: '#f87171',
+    marginTop: spacing.xs,
+  },
+  errorBanner: {
+    backgroundColor: '#7f1d1d',
+    padding: spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  errorBannerText: {
+    color: colors.text,
+  },
+  button: {
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  linksRow: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  linkText: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 });
