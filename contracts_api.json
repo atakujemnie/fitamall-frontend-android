@@ -1,112 +1,345 @@
-# Fit'am all – API Contract (Frontend & Backend)
-
-## Trainer Discovery API v1 – wspólny kontrakt
-
-Dokument opisuje uzgodnioną strukturę danych i endpointy obsługujące wyszukiwanie trenerów. Obowiązuje zarówno dla backendu (Laravel 12), jak i frontendu mobilnego (React Native). Każda zmiana tego kontraktu wymaga aktualizacji w obu repozytoriach.
-
----
-
-## 1. Endpoint: licznik trenerów
-
-**GET** `/api/trainers/stats`
-**Dostęp:** publiczny
-
-### Response 200
-
-```
 {
-  "total_public_trainers": 10
+  "base_path": "/api",
+  "endpoints": [
+    {
+      "name": "Register client",
+      "method": "POST",
+      "path": "/auth/register/client",
+      "middleware": ["web"],
+      "request": {
+        "first_name": "string, required, max 255",
+        "last_name": "string, required, max 255",
+        "email": "email, required, lowercase, unique",
+        "password": "string, required, confirmed, Password::defaults",
+        "password_confirmation": "string, required",
+        "channel": "web|mobile, required"
+      },
+      "responses": {
+        "201_web": {
+          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
+          "guard": "web",
+          "csrf_token": "string"
+        },
+        "201_mobile": {
+          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
+          "guard": "sanctum",
+          "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] }
+        }
+      },
+      "tests": ["tests/Feature/Auth/... (sprawdź scenariusze rejestracji klienta)"]
+    },
+    {
+      "name": "Register provider",
+      "method": "POST",
+      "path": "/auth/register/provider",
+      "middleware": ["web"],
+      "request": {
+        "first_name": "string, required, max 255",
+        "last_name": "string, required, max 255",
+        "email": "email, required, lowercase, unique",
+        "password": "string, required, confirmed",
+        "password_confirmation": "string, required",
+        "provider_name": "string, required, max 255",
+        "city": "string, optional, max 255",
+        "country": "string, optional, max 255",
+        "description": "string, optional",
+        "channel": "web|mobile, required"
+      },
+      "responses": {
+        "201_web": {
+          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
+          "service_provider": { "id": "int", "type": "personal_trainer", "name": "string", "slug": "string", "role": "owner" },
+          "guard": "web",
+          "csrf_token": "string"
+        },
+        "201_mobile": {
+          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
+          "service_provider": { "id": "int", "type": "personal_trainer", "name": "string", "slug": "string", "role": "owner" },
+          "guard": "sanctum",
+          "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] }
+        }
+      },
+      "tests": ["tests/Feature/Auth/... (scenariusze rejestracji providera)"]
+    },
+    {
+      "name": "Login",
+      "method": "POST",
+      "path": "/auth/login",
+      "middleware": ["web", "throttle:login"],
+      "request": {
+        "email": "email, required, lowercase",
+        "password": "string, required",
+        "channel": "web|mobile, required",
+        "device_name": "string, required if channel=mobile, max 255"
+      },
+      "responses": {
+        "200_web": { "user": "pełne dane z rolami i providerami", "guard": "web", "csrf_token": "string" },
+        "200_mobile": { "user": "pełne dane z rolami i providerami", "guard": "sanctum", "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] } },
+        "422": { "message": "Invalid credentials." },
+        "403": { "message": "User is not active." }
+      },
+      "tests": ["tests/Feature/Auth/... (login web/mobile, walidacja)"]
+    },
+    {
+      "name": "Logout",
+      "method": "POST",
+      "path": "/auth/logout",
+      "middleware": ["web", "auth:sanctum"],
+      "responses": {
+        "200": { "message": "Logged out." }
+      },
+      "tests": ["tests/Feature/Auth/... (wylogowanie, unieważnienie tokenu)"]
+    },
+    {
+      "name": "Me",
+      "method": "GET",
+      "path": "/auth/me",
+      "middleware": ["web", "auth:sanctum"],
+      "responses": {
+        "200": { "user": "pełne dane z rolami, providerami i kontami social" }
+      },
+      "tests": ["tests/Feature/Auth/... (zwracanie danych zalogowanego użytkownika)"]
+    },
+    {
+      "name": "Social login (mobile)",
+      "method": "POST",
+      "path": "/auth/social/mobile",
+      "middleware": ["web", "throttle:social-login"],
+      "request": {
+        "provider": "google|apple, required",
+        "access_token": "string, required_without id_token/auth_code",
+        "id_token": "string, required_without access_token/auth_code",
+        "auth_code": "string, required_without access_token/id_token",
+        "device_name": "string, required, max 255"
+      },
+      "responses": {
+        "200": { "user": "pełne dane z rolami, providerami i kontami social", "guard": "sanctum", "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] } },
+        "422": { "message": "Unable to verify social token with provider." },
+        "403": { "message": "User is not active." }
+      },
+      "tests": ["tests/Feature/Auth/... (walidacja tokenów social, tworzenie/użycie konta)"]
+    },
+    {
+      "name": "Social login (web redirect/callback)",
+      "method": "GET",
+      "path": ["/auth/{provider}/redirect", "/auth/{provider}/callback"],
+      "middleware": [],
+      "request": { "provider": "google|apple" },
+      "responses": {
+        "302_success": "przekierowanie do SPA z aktywną sesją",
+        "422": "błąd weryfikacji tokenu",
+        "403": "użytkownik nieaktywny"
+      },
+      "tests": ["tests/Feature/Auth/... (przepływ web redirect/callback)"]
+    },
+    {
+      "name": "Public trainers stats",
+      "method": "GET",
+      "path": "/trainers/stats",
+      "middleware": [],
+      "responses": {
+        "200": { "total_public_trainers": "int" }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (pokrycie metryk/statystyk)"]
+    },
+    {
+      "name": "Public trainers filters",
+      "method": "GET",
+      "path": "/trainers/filters",
+      "middleware": [],
+      "responses": {
+        "200": { "cities": ["string"] }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (filtry miasta)"]
+    },
+    {
+      "name": "Public trainers list",
+      "method": "GET",
+      "path": "/trainers",
+      "middleware": [],
+      "query": { "city": "opcjonalny filtr po mieście" },
+      "responses": {
+        "200": [
+          { "id": "int", "first_name": "string", "last_name": "string", "city": "string|null" }
+        ]
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (lista publicznych trenerów)"]
+    },
+    {
+      "name": "Trainer dashboard",
+      "method": "GET",
+      "path": "/trainer/me | /trainer/dashboard",
+      "middleware": ["auth:sanctum", "trainer"],
+      "responses": {
+        "200": {
+          "name": "string",
+          "personal_data": "obiekt z danymi i brakującymi polami",
+          "profile": "obiekt profilu z galerią i specjalizacjami",
+          "profile_completion": "int",
+          "missing_fields": { "personal_data": ["..."], "profile": ["..."] },
+          "missing_items": ["..."],
+          "status": { "is_public_trainer": "bool", "accepting_new_clients": "bool" },
+          "available_specializations": ["id","name","slug"],
+          "available_target_groups": ["id","name","slug"]
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (dashboard)"]
+    },
+    {
+      "name": "Trainer personal data (read/update)",
+      "method": ["GET", "PUT"],
+      "path": "/trainer/personal-data",
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(PUT)": {
+        "first_name": "string, required, max 255",
+        "last_name": "string, required, max 255",
+        "phone": "string, optional, max 50",
+        "city": "string, optional, max 255",
+        "country": "string, optional, max 255"
+      },
+      "responses": {
+        "200": {
+          "first_name": "string",
+          "last_name": "string",
+          "email": "string",
+          "phone": "string|null",
+          "city": "string|null",
+          "country": "string|null",
+          "missing_fields": ["..."],
+          "profile_completion": "int"
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (pobranie/aktualizacja danych osobowych)"]
+    },
+    {
+      "name": "Trainer profile (read/update)",
+      "method": ["GET", "PUT"],
+      "path": "/trainer/profile",
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(PUT)": {
+        "bio": "string, optional",
+        "experience_years": "int, optional, 0-80",
+        "languages": ["string, max 50"],
+        "training_modes": ["string, max 50"],
+        "specialization_ids": ["int exists:specializations"],
+        "target_group_ids": ["int exists:target_groups"],
+        "provider_name": "string, optional, max 255",
+        "description": "string, optional"
+      },
+      "responses": {
+        "200": {
+          "bio": "string|null",
+          "experience_years": "int|null",
+          "languages": ["string"],
+          "training_modes": ["string"],
+          "provider_name": "string|null",
+          "description": "string|null",
+          "specializations": [{"id":"int","name":"string","slug":"string"}],
+          "target_groups": [{"id":"int","name":"string","slug":"string"}],
+          "avatar_url": "string|null",
+          "photos": [{"id":"int","url":"string","is_primary":false,"position":"int"}],
+          "accepting_new_clients": "bool",
+          "missing_fields": ["..."],
+          "profile_completion": "int"
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (odczyt/aktualizacja profilu)"]
+    },
+    {
+      "name": "Trainer options",
+      "method": "GET",
+      "path": "/trainer/options",
+      "middleware": ["auth:sanctum", "trainer"],
+      "responses": {
+        "200": {
+          "available_specializations": [{"id":"int","name":"string","slug":"string"}],
+          "available_target_groups": [{"id":"int","name":"string","slug":"string"}]
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (opcje formularzy)"]
+    },
+    {
+      "name": "Trainer avatar upload/delete",
+      "method": ["POST", "DELETE"],
+      "path": "/trainer/avatar",
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(POST)": { "avatar": "image, required, max 4096KB" },
+      "responses": {
+        "200_post": "zaktualizowany TrainerProfileResource (jak wyżej)",
+        "404_delete": { "message": "Avatar not found" },
+        "200_delete": { "message": "Avatar deleted" }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (upload/delete avatara)"]
+    },
+    {
+      "name": "Trainer gallery photos",
+      "method": ["GET", "POST", "DELETE"],
+      "path": ["/trainer/photos", "/trainer/photos/{photo}"],
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(POST)": { "photo": "image, required, max 6144KB; limit 5" },
+      "responses": {
+        "200_get": [{"id":"int","url":"string","is_primary":false,"position":"int"}],
+        "200_post": { "id":"int","url":"string","is_primary":false,"position":"int" },
+        "404_delete": { "message": "Not found" },
+        "200_delete": { "message": "Photo deleted" }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (galeria zdjęć, limit, usuwanie)"]
+    },
+    {
+      "name": "Trainer status",
+      "method": ["GET", "PUT"],
+      "path": "/trainer/status",
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(PUT)": {
+        "is_public_trainer": "boolean, required",
+        "accepting_new_clients": "boolean, required"
+      },
+      "responses": {
+        "200": {
+          "is_public_trainer": "bool",
+          "accepting_new_clients": "bool"
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (status widoczności i przyjmowania klientów)"]
+    },
+    {
+      "name": "Trainer consents",
+      "method": ["GET", "PUT"],
+      "path": ["/trainer/consents", "/trainer/settings/consents"],
+      "middleware": ["auth:sanctum", "trainer"],
+      "request(PUT)": {
+        "terms_accepted": "boolean, sometimes",
+        "privacy_policy_accepted": "boolean, sometimes",
+        "marketing_consent": "boolean, sometimes",
+        "notifications_push": "boolean, sometimes",
+        "notifications_email": "boolean, sometimes"
+      },
+      "responses": {
+        "200": {
+          "terms_accepted_at": "datetime|null",
+          "privacy_policy_accepted_at": "datetime|null",
+          "marketing_consent": "bool",
+          "marketing_consent_at": "datetime|null",
+          "notifications_push": "bool",
+          "notifications_email": "bool"
+        }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (aktualizacja zgód)"]
+    },
+    {
+      "name": "Trainer change password",
+      "method": ["PUT", "POST"],
+      "path": "/trainer/change-password",
+      "middleware": ["auth:sanctum", "trainer"],
+      "request": {
+        "current_password": "string, required, must match",
+        "password": "string, required, confirmed, Password::defaults",
+        "password_confirmation": "string, required"
+      },
+      "responses": {
+        "200": { "message": "Password updated" }
+      },
+      "tests": ["tests/Feature/TrainerAreaTest.php (zmiana hasła)"]
+    }
+  ]
 }
-```
-
-### Zasady
-
-* Backend filtruje: `is_public_trainer = true`, `is_active = true`.
-* Front używa tego endpointu do wyświetlenia licznika na stronie głównej.
-
----
-
-## 2. Endpoint: lista miast
-
-**GET** `/api/trainers/filters`
-**Dostęp:** publiczny
-
-### Response 200
-
-```
-{
-  "cities": ["Gdańsk", "Kraków", "Warszawa", "Wrocław"]
-}
-```
-
-### Zasady
-
-* Backend zwraca obiekt z kluczem `cities`.
-* Front oczekuje tablicy stringów.
-
-### Struktura TS
-
-```
-interface TrainerFiltersResponse {
-  cities: string[];
-}
-```
-
----
-
-## 3. Endpoint: lista trenerów po mieście
-
-**GET** `/api/trainers?city={CITY_NAME}`
-**Dostęp:** publiczny
-
-### Response 200
-
-```
-[
-  {
-    "id": 1,
-    "first_name": "Trener",
-    "last_name": "Testowy",
-    "city": "Warszawa"
-  }
-]
-```
-
-### Zasady
-
-* Backend zwraca tablicę obiektów, nawet gdy jest pusta.
-* Front renderuje listę trenerów po wyborze miasta.
-
-### Struktura TS
-
-```
-interface TrainerListItem {
-  id?: string | number;
-  first_name: string;
-  last_name: string;
-  city: string;
-}
-```
-
----
-
-## 4. Zasady kompatybilności
-
-* Backend może dodawać nowe pola (np. avatar_url, rating) – front traktuje je jako opcjonalne.
-* Niedozwolone bez synchronizacji:
-
-  * zmiana nazwy istniejących pól,
-  * zmiana struktury odpowiedzi,
-  * zmiana typów pól,
-  * zmiana ścieżek endpointów.
-* Każda zmiana wymaga aktualizacji tego dokumentu w dwóch repo.
-
----
-
-## 5. Przyszłe rozszerzenia
-
-Nowe funkcje trenerów (profil, kalendarz, usługi) muszą otrzymać własne sekcje w tym pliku.
-
----
-
-**Status kontraktu:** stabilny, obowiązujący od wdrożenia wyszukiwarki trenerów.
