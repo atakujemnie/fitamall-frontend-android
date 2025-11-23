@@ -6,5 +6,5 @@ export interface AuthState {
   status: 'checking' | 'unauthenticated' | 'authenticated';
   user: AuthUser | null;
   token: string | null;
-  serviceProviders?: ServiceProvider[];
+  serviceProviders: ServiceProvider[];
 }

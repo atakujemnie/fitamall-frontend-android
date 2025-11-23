@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import axios from 'axios';
 import {
   ActivityIndicator,
   ScrollView,
@@ -14,11 +13,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
 import { useAuth } from '../AuthContext';
-import { RegisterProviderRequest, ValidationErrorResponse } from '../../../shared/api/auth.types';
+import { RegisterProviderRequest } from '../../../shared/api/auth.types';
 import { colors, spacing } from '../../../shared/theme';
-
-const isValidationError = (error: unknown): error is ValidationErrorResponse =>
-  typeof error === 'object' && !!error && 'errors' in error;
+import { mapApiError } from '../../../shared/utils/apiErrors';
 
 export const RegisterProviderScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
@@ -69,31 +66,6 @@ export const RegisterProviderScreen: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleValidationError = (error: ValidationErrorResponse) => {
-    const errors: Record<string, string> = {};
-
-    Object.entries(error.errors ?? {}).forEach(([field, messages]) => {
-      if (!messages || !messages.length) return;
-
-      switch (field) {
-        case 'name':
-          errors.first_name = messages[0];
-          break;
-        case 'company_name':
-          errors.provider_name = messages[0];
-          break;
-        default:
-          errors[field] = messages[0];
-      }
-    });
-
-    setFieldErrors(prev => ({ ...prev, ...errors }));
-
-    if (!Object.keys(errors).length && error.message) {
-      setBannerError(error.message);
-    }
-  };
-
   const handleSubmit = async () => {
     setBannerError('');
     setFieldErrors({});
@@ -119,16 +91,17 @@ export const RegisterProviderScreen: React.FC = () => {
     try {
       await registerProvider(payload);
     } catch (error) {
-      if (isValidationError(error)) {
-        handleValidationError(error);
-      } else if (
-        axios.isAxiosError(error) &&
-        error.response?.data?.message &&
-        typeof error.response.data.message === 'string'
-      ) {
-        setBannerError(error.response.data.message);
-      } else {
-        setBannerError('Something went wrong. Please try again.');
+      const mapped = mapApiError(error, {
+        fallbackMessage: 'Could not create your provider account. Please try again.',
+        fieldNameMap: { name: 'first_name', company_name: 'provider_name' },
+      });
+
+      if (mapped.fieldErrors) {
+        setFieldErrors(prev => ({ ...prev, ...mapped.fieldErrors }));
+      }
+
+      if (mapped.message) {
+        setBannerError(mapped.message);
       }
     } finally {
       setSubmitting(false);

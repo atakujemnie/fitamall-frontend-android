@@ -20,8 +20,9 @@ import {
   RegisterClientRequest,
   RegisterProviderRequest,
 } from '../../shared/api/auth.types';
-import { setAuthToken } from '../../shared/api/httpClient';
+import { setAuthToken, setUnauthorizedHandler } from '../../shared/api/httpClient';
 import { AuthState, AuthUser } from './auth.types';
+import { logDebug } from '../../shared/utils/logger';
 
 interface AuthContextValue {
   state: AuthState;
@@ -38,6 +39,7 @@ const initialState: AuthState = {
   status: 'checking',
   user: null,
   token: null,
+  serviceProviders: [],
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -69,13 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: 'authenticated',
         token: tokenValue,
         user: me.user,
+        serviceProviders: me.service_providers ?? [],
       }));
 
       return me.user;
     } catch (error) {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
       setAuthToken();
-      setState({ status: 'unauthenticated', user: null, token: null });
+      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
       throw error;
     }
   }, []);
@@ -86,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
       setAuthToken();
-      setState({ status: 'unauthenticated', user: null, token: null });
+      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
     }
   }, []);
 
@@ -130,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       status: 'authenticated',
       user: me.user,
+      serviceProviders: me.service_providers ?? [],
     }));
 
     return me.user;
@@ -142,22 +146,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!storedToken) {
           setAuthToken();
-          setState({ status: 'unauthenticated', user: null, token: null });
+          setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
           return;
         }
 
         setAuthToken(storedToken);
         const me = await getMe();
 
-        setState({ status: 'authenticated', user: me.user, token: storedToken });
+        setState({
+          status: 'authenticated',
+          user: me.user,
+          token: storedToken,
+          serviceProviders: me.service_providers ?? [],
+        });
       } catch (error) {
         await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
         setAuthToken();
-        setState({ status: 'unauthenticated', user: null, token: null });
+        setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
       }
     };
 
     bootstrapAuth();
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(async () => {
+      logDebug('Authentication token rejected; clearing session');
+      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      setAuthToken();
+      setState({ status: 'unauthenticated', user: null, token: null, serviceProviders: [] });
+    });
+
+    return () => setUnauthorizedHandler();
   }, []);
 
   const contextValue = useMemo<AuthContextValue>(

@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import axios from 'axios';
 import {
   ActivityIndicator,
   ScrollView,
@@ -14,11 +13,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
 import { useAuth } from '../AuthContext';
-import { ValidationErrorResponse } from '../../../shared/api/auth.types';
 import { colors, spacing } from '../../../shared/theme';
-
-const isValidationError = (error: unknown): error is ValidationErrorResponse =>
-  typeof error === 'object' && !!error && 'errors' in error;
+import { mapApiError } from '../../../shared/utils/apiErrors';
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
@@ -49,22 +45,6 @@ export const LoginScreen: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleValidationError = (error: ValidationErrorResponse) => {
-    const errors: Record<string, string> = {};
-
-    Object.entries(error.errors ?? {}).forEach(([field, messages]) => {
-      if (messages && messages.length > 0) {
-        errors[field] = messages[0];
-      }
-    });
-
-    setFieldErrors(prev => ({ ...prev, ...errors }));
-
-    if (!Object.keys(errors).length && error.message) {
-      setBannerError(error.message);
-    }
-  };
-
   const handleSubmit = async () => {
     setBannerError('');
     setFieldErrors({});
@@ -78,26 +58,14 @@ export const LoginScreen: React.FC = () => {
     try {
       await login(email.trim(), password, 'fitamall-mobile');
     } catch (error) {
-      if (isValidationError(error)) {
-        handleValidationError(error);
-        setSubmitting(false);
-        return;
+      const mapped = mapApiError(error, { fallbackMessage: 'Invalid credentials.' });
+
+      if (mapped.fieldErrors) {
+        setFieldErrors(prev => ({ ...prev, ...mapped.fieldErrors }));
       }
 
-      if (
-        axios.isAxiosError(error) &&
-        error.response?.status === 403 &&
-        error.response?.data?.message === 'User is not active.'
-      ) {
-        setBannerError('User is not active.');
-      } else if (
-        axios.isAxiosError(error) &&
-        error.response?.status === 422 &&
-        error.response?.data?.message === 'Invalid credentials.'
-      ) {
-        setBannerError('Invalid credentials.');
-      } else {
-        setBannerError('Something went wrong. Please try again.');
+      if (mapped.message) {
+        setBannerError(mapped.message);
       }
     } finally {
       setSubmitting(false);
