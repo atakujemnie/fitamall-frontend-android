@@ -45,6 +45,7 @@ export const TrainerPersonalDataScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
+
   useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
@@ -61,6 +62,12 @@ export const TrainerPersonalDataScreen: React.FC = () => {
   }, []);
 
   const fetchPersonalData = useCallback(async () => {
+    if (!state.token) {
+      setLoading(false);
+      return;
+    }
+
+    setAuthToken(state.token);
     setLoading(true);
     setBannerError('');
 
@@ -78,7 +85,7 @@ export const TrainerPersonalDataScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [hydrateForm]);
+  }, [hydrateForm, state.token]);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,6 +105,13 @@ export const TrainerPersonalDataScreen: React.FC = () => {
     setBannerError('');
     setFieldErrors({});
     setSaving(true);
+
+    if (!state.token) {
+      setSaving(false);
+      return;
+    }
+
+    setAuthToken(state.token);
 
     const payload = {
       first_name: firstName.trim(),
