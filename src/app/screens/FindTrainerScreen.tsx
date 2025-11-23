@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { colors, spacing } from '../../shared/theme';
-import { getTrainerFilters, TrainerFiltersResponse } from '../../shared/api/trainers.api';
+import {
+  getTrainerFilters,
+  getTrainersByCity,
+  TrainerFiltersResponse,
+  TrainerListItem,
+} from '../../shared/api/trainers.api';
 
 export const FindTrainerScreen: React.FC = () => {
   const [filters, setFilters] = useState<TrainerFiltersResponse | null>(null);
   const [selectedCity, setSelectedCity] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
+  const [isTrainersLoading, setIsTrainersLoading] = useState(false);
+  const [trainersError, setTrainersError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +49,44 @@ export const FindTrainerScreen: React.FC = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTrainers = async () => {
+      if (!selectedCity) {
+        setTrainers([]);
+        setTrainersError(null);
+        return;
+      }
+
+      setIsTrainersLoading(true);
+      setTrainersError(null);
+      setTrainers([]);
+
+      try {
+        const response = await getTrainersByCity(selectedCity);
+
+        if (isMounted) {
+          setTrainers(response);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setTrainersError('Nie udało się wczytać trenerów. Spróbuj ponownie później.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsTrainersLoading(false);
+        }
+      }
+    };
+
+    loadTrainers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCity]);
 
   const cities = filters?.cities ?? [];
 
@@ -80,13 +126,31 @@ export const FindTrainerScreen: React.FC = () => {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Dostępni trenerzy</Text>
-        {selectedCity ? (
-          <Text style={styles.metaText}>
-            Lista trenerów dla miasta {selectedCity} zostanie załadowana po wybraniu dodatkowych
-            filtrów.
-          </Text>
-        ) : (
+        {!selectedCity ? (
           <Text style={styles.metaText}>Wybierz miasto, aby zobaczyć listę trenerów.</Text>
+        ) : isTrainersLoading ? (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.metaText}>Wczytuję listę trenerów...</Text>
+          </View>
+        ) : trainersError ? (
+          <Text style={[styles.metaText, styles.errorText]}>{trainersError}</Text>
+        ) : trainers.length === 0 ? (
+          <Text style={styles.metaText}>Brak trenerów w wybranym mieście.</Text>
+        ) : (
+          <FlatList
+            data={trainers}
+            keyExtractor={(item, index) => `${item.id ?? `${item.first_name}-${item.last_name}`}-${index}`}
+            renderItem={({ item }) => (
+              <View style={styles.trainerItem}>
+                <Text style={styles.trainerName}>
+                  {item.first_name} {item.last_name}
+                </Text>
+                <Text style={styles.metaText}>{item.city}</Text>
+              </View>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
         )}
       </View>
     </SafeAreaView>
@@ -141,5 +205,19 @@ const styles = StyleSheet.create({
   picker: {
     backgroundColor: colors.background,
     color: colors.text,
+  },
+  trainerItem: {
+    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  trainerName: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xs,
   },
 });

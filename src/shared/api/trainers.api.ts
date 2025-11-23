@@ -8,6 +8,13 @@ export interface TrainerFiltersResponse {
   cities: string[];
 }
 
+export interface TrainerListItem {
+  id?: string;
+  first_name: string;
+  last_name: string;
+  city: string;
+}
+
 export const getTrainerStats = async (): Promise<TrainerStatsResponse> => {
   const response = await httpClient.get<TrainerStatsResponse>('/api/trainers/stats');
 
@@ -16,6 +23,14 @@ export const getTrainerStats = async (): Promise<TrainerStatsResponse> => {
 
 export const getTrainerFilters = async (): Promise<TrainerFiltersResponse> => {
   const response = await httpClient.get<TrainerFiltersResponse>('/api/trainers/filters');
+
+  return response.data;
+};
+
+export const getTrainersByCity = async (city: string): Promise<TrainerListItem[]> => {
+  const response = await httpClient.get<TrainerListItem[]>('/api/trainers', {
+    params: { city },
+  });
 
   return response.data;
 };
