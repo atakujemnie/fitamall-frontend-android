@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
 import { useAuth } from '../AuthContext';
+import { LoginRequest } from '../../../shared/api/auth.types';
 import { colors, spacing } from '../../../shared/theme';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 
@@ -56,7 +57,14 @@ export const LoginScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
-      await login(email.trim(), password, 'fitamall-mobile');
+      const payload: LoginRequest = {
+        email: email.trim(),
+        password,
+        channel: 'mobile',
+        device_name: 'fitamall-mobile',
+      };
+
+      await login(payload);
     } catch (error) {
       const mapped = mapApiError(error, { fallbackMessage: 'Invalid credentials.' });
 

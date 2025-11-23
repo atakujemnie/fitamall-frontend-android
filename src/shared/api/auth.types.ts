@@ -1,6 +1,6 @@
 export interface User {
   id: number;
-  name: string;
+  name?: string;
   first_name?: string;
   last_name?: string;
   email: string;
@@ -12,9 +12,11 @@ export interface User {
 }
 
 export interface ServiceProvider extends User {
-  company_name?: string;
+  provider_name?: string;
   category?: string;
   description?: string;
+  city?: string;
+  country?: string;
   address?: string;
 }
 
@@ -31,26 +33,32 @@ export interface ValidationErrorResponse {
 }
 
 export interface RegisterClientRequest {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
   password_confirmation: string;
-  phone?: string;
-  channel?: string;
+  channel: 'mobile';
 }
 
-export interface RegisterProviderRequest extends RegisterClientRequest {
-  company_name?: string;
-  category?: string;
+export interface RegisterProviderRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  provider_name: string;
+  channel: 'mobile';
+  city?: string;
+  country?: string;
   description?: string;
-  address?: string;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
-  device_name?: string;
-  channel?: string;
+  device_name: string;
+  channel: 'mobile';
 }
 
 export interface RegisterClientResponse {
