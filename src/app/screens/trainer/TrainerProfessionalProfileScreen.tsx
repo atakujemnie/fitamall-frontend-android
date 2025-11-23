@@ -15,7 +15,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../features/auth/AuthContext';
 import { setAuthToken } from '../../../shared/api/httpClient';
-import { getTrainerProfile, updateTrainerProfile } from '../../../shared/api/trainer.api';
+import {
+  getTrainerOptions,
+  getTrainerProfile,
+  updateTrainerProfile,
+} from '../../../shared/api/trainer.api';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
 
@@ -98,6 +102,22 @@ const normalizeTrainingModes = (list?: string[]): string[] => {
   return list.map(mode => String(mode)).filter(Boolean);
 };
 
+const mergeOptionLists = (...lists: Array<Option[] | undefined>): Option[] => {
+  const merged = new Map<string, Option>();
+
+  lists.forEach(list => {
+    list?.forEach(option => {
+      const key = String(option.id);
+
+      if (!merged.has(key)) {
+        merged.set(key, option);
+      }
+    });
+  });
+
+  return Array.from(merged.values());
+};
+
 const clampCompletion = (value?: number): number => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return 0;
@@ -156,7 +176,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     }
   }, [state.token]);
 
-  const hydrateForm = useCallback((payload: TrainerProfileResponse) => {
+  const hydrateForm = useCallback((payload: TrainerProfileResponse, options?: TrainerProfileResponse) => {
     const bio = payload.bio ?? payload.headline ?? '';
     setHeadline(bio);
     setAbout(payload.about ?? bio);
@@ -177,28 +197,40 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     }
 
     setSpecializationOptions(
-      toOptionList(
-        payload.specialization_options ??
-          payload.specializations ??
-          payload.available_specializations ??
-          [],
+      mergeOptionLists(
+        toOptionList(
+          payload.specialization_options ??
+            payload.specializations ??
+            payload.available_specializations ??
+            [],
+        ),
+        toOptionList(options?.available_specializations),
+        toOptionList(options?.specialization_options ?? options?.specializations),
       ),
     );
     setTrainingModeOptions(
-      toOptionList(
-        payload.training_mode_options ??
-          payload.training_modes_options ??
-          payload.available_training_modes ??
-          payload.training_modes ??
-          [],
+      mergeOptionLists(
+        toOptionList(
+          payload.training_mode_options ??
+            payload.training_modes_options ??
+            payload.available_training_modes ??
+            payload.training_modes ??
+            [],
+        ),
+        toOptionList(options?.available_training_modes ?? options?.training_modes),
+        toOptionList(options?.training_mode_options ?? options?.training_modes_options),
       ),
     );
     setTargetGroupOptions(
-      toOptionList(
-        payload.target_group_options ??
-          payload.target_groups ??
-          payload.available_target_groups ??
-          [],
+      mergeOptionLists(
+        toOptionList(
+          payload.target_group_options ??
+            payload.target_groups ??
+            payload.available_target_groups ??
+            [],
+        ),
+        toOptionList(options?.available_target_groups),
+        toOptionList(options?.target_group_options ?? options?.target_groups),
       ),
     );
     setProfileCompletion(
@@ -219,8 +251,13 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     setBannerError('');
 
     try {
-      const data = await getTrainerProfile<TrainerProfileResponse>();
-      hydrateForm(data);
+      const optionsPromise = getTrainerOptions<TrainerProfileResponse>().catch(() => undefined);
+      const [data, options] = await Promise.all([
+        getTrainerProfile<TrainerProfileResponse>(),
+        optionsPromise,
+      ]);
+
+      hydrateForm(data, options);
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się wczytać profilu zawodowego. Spróbuj ponownie.',

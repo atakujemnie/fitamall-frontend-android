@@ -31,6 +31,9 @@ const TRAINER_ME_PATH = '/api/trainer/me';
 export const getTrainerDashboard = async <T = unknown>(): Promise<T> =>
   handleRequest(() => httpClient.get<T>(`${TRAINER_BASE_PATH}/dashboard`));
 
+export const getTrainerOptions = async <T = unknown>(): Promise<T> =>
+  handleRequest(() => httpClient.get<T>(`${TRAINER_BASE_PATH}/options`));
+
 export const getTrainerPersonalData = async <T = unknown>(): Promise<T> =>
   handleRequest(() => httpClient.get<T>(`${TRAINER_BASE_PATH}/personal-data`));
 
