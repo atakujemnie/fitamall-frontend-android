@@ -150,7 +150,6 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   const [specializationOptions, setSpecializationOptions] = useState<Option[]>([]);
   const [trainingModeOptions, setTrainingModeOptions] = useState<Option[]>([]);
   const [targetGroupOptions, setTargetGroupOptions] = useState<Option[]>([]);
-
   useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
@@ -210,6 +209,12 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   }, []);
 
   const fetchProfile = useCallback(async () => {
+    if (!state.token) {
+      setLoading(false);
+      return;
+    }
+
+    setAuthToken(state.token);
     setLoading(true);
     setBannerError('');
 
@@ -227,7 +232,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [hydrateForm]);
+  }, [hydrateForm, state.token]);
 
   useFocusEffect(
     useCallback(() => {
@@ -301,6 +306,13 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     }
 
     setSaving(true);
+
+    if (!state.token) {
+      setSaving(false);
+      return;
+    }
+
+    setAuthToken(state.token);
 
     const combinedBio = [trimmedHeadline, trimmedAbout].filter(Boolean).join('\n\n');
     const languagesArray = languages

@@ -79,7 +79,6 @@ export const TrainerPhotosScreen: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingAvatar, setDeletingAvatar] = useState(false);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | number | null>(null);
-
   useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
@@ -91,6 +90,12 @@ export const TrainerPhotosScreen: React.FC = () => {
   }, []);
 
   const fetchAvatar = useCallback(async () => {
+    if (!state.token) {
+      setLoadingAvatar(false);
+      return;
+    }
+
+    setAuthToken(state.token);
     setLoadingAvatar(true);
     setAvatarError('');
 
@@ -106,9 +111,15 @@ export const TrainerPhotosScreen: React.FC = () => {
     } finally {
       setLoadingAvatar(false);
     }
-  }, [resolveAvatarUrl]);
+  }, [resolveAvatarUrl, state.token]);
 
   const fetchPhotos = useCallback(async () => {
+    if (!state.token) {
+      setLoadingPhotos(false);
+      return;
+    }
+
+    setAuthToken(state.token);
     setLoadingPhotos(true);
     setPhotosError('');
 
@@ -125,7 +136,7 @@ export const TrainerPhotosScreen: React.FC = () => {
     } finally {
       setLoadingPhotos(false);
     }
-  }, []);
+  }, [state.token]);
 
   useFocusEffect(
     useCallback(() => {
@@ -160,6 +171,12 @@ export const TrainerPhotosScreen: React.FC = () => {
 
   const handleUploadAvatar = useCallback(async () => {
     setAvatarError('');
+
+    if (!state.token) {
+      return;
+    }
+
+    setAuthToken(state.token);
     setUploadingAvatar(true);
 
     try {
@@ -187,10 +204,15 @@ export const TrainerPhotosScreen: React.FC = () => {
     } finally {
       setUploadingAvatar(false);
     }
-  }, [fetchAvatar, pickImage, showToast]);
+  }, [fetchAvatar, pickImage, showToast, state.token]);
 
   const handleDeleteAvatar = useCallback(async () => {
     setAvatarError('');
+    if (!state.token) {
+      return;
+    }
+
+    setAuthToken(state.token);
     setDeletingAvatar(true);
 
     try {
@@ -206,7 +228,7 @@ export const TrainerPhotosScreen: React.FC = () => {
     } finally {
       setDeletingAvatar(false);
     }
-  }, [showToast]);
+  }, [showToast, state.token]);
 
   const handleAddPhoto = useCallback(async () => {
     setPhotosError('');
@@ -216,6 +238,11 @@ export const TrainerPhotosScreen: React.FC = () => {
       return;
     }
 
+    if (!state.token) {
+      return;
+    }
+
+    setAuthToken(state.token);
     setUploadingPhoto(true);
 
     try {
@@ -249,10 +276,15 @@ export const TrainerPhotosScreen: React.FC = () => {
     } finally {
       setUploadingPhoto(false);
     }
-  }, [fetchPhotos, photos.length, pickImage, showToast]);
+  }, [fetchPhotos, photos.length, pickImage, showToast, state.token]);
 
   const handleDeletePhoto = useCallback(
     async (photoId: string | number) => {
+      if (!state.token) {
+        return;
+      }
+
+      setAuthToken(state.token);
       setPhotosError('');
       setDeletingPhotoId(photoId);
 
@@ -270,7 +302,7 @@ export const TrainerPhotosScreen: React.FC = () => {
         setDeletingPhotoId(null);
       }
     },
-    [showToast],
+    [showToast, state.token],
   );
 
   const availableSlots = useMemo(() => MAX_PHOTOS - photos.length, [photos.length]);
