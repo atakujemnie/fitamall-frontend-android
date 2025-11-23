@@ -1,11 +1,17 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../shared/theme';
 import { useAuth } from '../../features/auth/AuthContext';
 import { ServiceProvider } from '../../shared/api/auth.types';
+import { AppStackParamList } from '../navigation/AppNavigator';
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<AppStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const { state, logout } = useAuth();
   const user = state.user;
   const serviceProviders = state.serviceProviders ?? [];
@@ -22,6 +28,13 @@ export const HomeScreen: React.FC = () => {
         {user?.roles?.length ? (
           <Text style={styles.metaText}>Roles: {user.roles.join(', ')}</Text>
         ) : null}
+
+        <Pressable
+          style={[styles.actionButton, styles.primaryButton]}
+          onPress={() => navigation.navigate('FindTrainer')}
+        >
+          <Text style={styles.actionButtonText}>Znajdź trenera</Text>
+        </Pressable>
       </View>
 
       <View style={styles.card}>
@@ -66,6 +79,20 @@ const styles = StyleSheet.create({
   header: {
     padding: spacing.lg,
     gap: spacing.xs,
+  },
+  actionButton: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
+  actionButtonText: {
+    color: colors.text,
+    fontWeight: '700',
   },
   card: {
     marginHorizontal: spacing.lg,
