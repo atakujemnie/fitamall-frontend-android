@@ -1,11 +1,14 @@
 export interface User {
   id: number;
   name: string;
+  first_name?: string;
+  last_name?: string;
   email: string;
   phone?: string;
   email_verified_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  roles?: string[];
 }
 
 export interface ServiceProvider extends User {
@@ -63,8 +66,10 @@ export interface RegisterProviderResponse {
 export interface LoginResponse {
   user: User | ServiceProvider;
   token: AuthToken;
+  service_providers?: ServiceProvider[];
 }
 
 export interface MeResponse {
   user: User | ServiceProvider;
+  service_providers?: ServiceProvider[];
 }
