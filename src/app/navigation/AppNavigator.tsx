@@ -6,7 +6,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { colors } from '../../shared/theme';
 import { FindTrainerScreen } from '../screens/FindTrainerScreen';
 import { useAuth } from '../../features/auth/AuthContext';
-import { TrainerDashboardScreen } from '../screens/trainer/TrainerDashboardScreen';
+import { TrainerDashboardScreen } from '../screens/TrainerDashboardScreen';
 import { TrainerPersonalDataScreen } from '../screens/trainer/TrainerPersonalDataScreen';
 import { TrainerProfessionalProfileScreen } from '../screens/trainer/TrainerProfessionalProfileScreen';
 import { TrainerPhotosScreen } from '../screens/trainer/TrainerPhotosScreen';
