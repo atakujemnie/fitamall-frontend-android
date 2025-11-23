@@ -94,15 +94,16 @@ export const changeTrainerPassword = async <T = unknown, P = unknown>(
   payload: P,
 ): Promise<T> =>
   handleRequest(() =>
-    httpClient.post<T>(`${TRAINER_BASE_PATH}/change-password`, payload),
+    httpClient.put<T>(`${TRAINER_BASE_PATH}/change-password`, payload),
   );
+
+export const getTrainerConsents = async <T = unknown>(): Promise<T> =>
+  handleRequest(() => httpClient.get<T>(`${TRAINER_BASE_PATH}/consents`));
 
 export const updateTrainerConsents = async <T = unknown, P = unknown>(
   payload: P,
 ): Promise<T> =>
-  handleRequest(() =>
-    httpClient.put<T>(`${TRAINER_BASE_PATH}/settings/consents`, payload),
-  );
+  handleRequest(() => httpClient.put<T>(`${TRAINER_BASE_PATH}/consents`, payload));
 
 export const updateTrainerStatus = async <T = unknown, P = unknown>(
   payload: P,
