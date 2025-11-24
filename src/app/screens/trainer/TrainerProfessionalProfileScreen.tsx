@@ -104,6 +104,76 @@ const normalizeTrainingModes = (list?: string[]): string[] => {
   return list.map(mode => String(mode)).filter(Boolean);
 };
 
+const collectSelectionIds = (
+  ...sources: Array<Array<unknown> | undefined>
+): Array<string | number> => {
+  const merged: Array<string | number> = [];
+
+  const addUnique = (value: string | number) => {
+    const key = String(value);
+
+    if (!merged.some(item => String(item) === key)) {
+      merged.push(value);
+    }
+  };
+
+  sources.forEach(list => {
+    if (!Array.isArray(list)) return;
+
+    list.forEach(item => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        addUnique(item);
+        return;
+      }
+
+      if (item && typeof item === 'object') {
+        const option = item as Record<string, unknown>;
+        const id = option.id ?? option.value ?? option.key ?? option.code ?? option.slug;
+
+        if (id !== undefined && id !== null) {
+          addUnique(id as string | number);
+        }
+      }
+    });
+  });
+
+  return normalizeSelectionIds(merged);
+};
+
+const collectStringSelections = (
+  ...sources: Array<Array<unknown> | undefined>
+): string[] => {
+  const merged: string[] = [];
+
+  const addUnique = (value: string) => {
+    if (!merged.includes(value)) {
+      merged.push(value);
+    }
+  };
+
+  sources.forEach(list => {
+    if (!Array.isArray(list)) return;
+
+    list.forEach(item => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        addUnique(String(item));
+        return;
+      }
+
+      if (item && typeof item === 'object') {
+        const option = item as Record<string, unknown>;
+        const value = option.code ?? option.key ?? option.value ?? option.id ?? option.slug;
+
+        if (value !== undefined && value !== null) {
+          addUnique(String(value));
+        }
+      }
+    });
+  });
+
+  return merged;
+};
+
 const mergeOptionLists = (...lists: Array<Option[] | undefined>): Option[] => {
   const merged = new Map<string, Option>();
 
@@ -186,16 +256,40 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     setYearsOfExperience(yearsValue === undefined ? '' : String(yearsValue));
 
     setSpecializationIds(
-      normalizeSelectionIds(payload.specialization_ids ?? payload.specializationIds),
+      collectSelectionIds(
+        payload.specialization_ids,
+        payload.specializationIds,
+        payload.specializations,
+        options?.specialization_ids,
+        options?.specializationIds,
+        options?.specializations,
+      ),
     );
-    setTrainingModes(normalizeTrainingModes(payload.training_modes ?? payload.trainingModes));
-    setTargetGroupIds(normalizeSelectionIds(payload.target_group_ids ?? payload.targetGroupIds));
+    setTrainingModes(
+      normalizeTrainingModes(
+        collectStringSelections(
+          payload.training_modes,
+          payload.trainingModes,
+          options?.training_modes,
+          options?.trainingModes,
+        ),
+      ),
+    );
+    setTargetGroupIds(
+      collectSelectionIds(
+        payload.target_group_ids,
+        payload.targetGroupIds,
+        payload.target_groups,
+        options?.target_group_ids,
+        options?.targetGroupIds,
+        options?.target_groups,
+      ),
+    );
 
-    if (Array.isArray(payload.languages)) {
-      setLanguages(payload.languages.join(', '));
-    } else {
-      setLanguages('');
-    }
+    const resolvedLanguages = normalizeTrainingModes(
+      collectStringSelections(payload.languages, options?.languages),
+    );
+    setLanguages(resolvedLanguages.length ? resolvedLanguages.join(', ') : '');
 
     setSpecializationOptions(
       mergeOptionLists(
