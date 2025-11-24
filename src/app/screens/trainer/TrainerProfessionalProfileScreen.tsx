@@ -221,6 +221,9 @@ const normalizeId = (value: string | number) => {
   return value;
 };
 
+const HEADLINE_MAX_LENGTH = 80;
+const ABOUT_MAX_LENGTH = 255;
+
 export const TrainerProfessionalProfileScreen: React.FC = () => {
   const { state, refreshMe } = useAuth();
 
@@ -441,6 +444,14 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     setBannerError('');
     setFieldErrors({});
 
+    if (trimmedHeadline.length > HEADLINE_MAX_LENGTH) {
+      validationErrors.headline = `Nagłówek może mieć maks. ${HEADLINE_MAX_LENGTH} znaków.`;
+    }
+
+    if (trimmedAbout.length > ABOUT_MAX_LENGTH) {
+      validationErrors.about = `Opis może mieć maks. ${ABOUT_MAX_LENGTH} znaków.`;
+    }
+
     if (trimmedYears) {
       if (!Number.isFinite(parsedYears) || parsedYears < 0 || parsedYears > 40) {
         validationErrors.experience_years = 'Doświadczenie musi mieścić się w zakresie 0-40 lat.';
@@ -579,7 +590,11 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
             placeholderTextColor={colors.mutedText}
             style={styles.input}
             editable={!saving}
+            maxLength={HEADLINE_MAX_LENGTH}
           />
+          <Text style={styles.helperText}>
+            {headline.length}/{HEADLINE_MAX_LENGTH} znaków
+          </Text>
           {fieldErrors.headline ? <Text style={styles.errorText}>{fieldErrors.headline}</Text> : null}
         </View>
 
@@ -595,7 +610,11 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
             numberOfLines={4}
             textAlignVertical="top"
             editable={!saving}
+            maxLength={ABOUT_MAX_LENGTH}
           />
+          <Text style={styles.helperText}>
+            {about.length}/{ABOUT_MAX_LENGTH} znaków
+          </Text>
           {fieldErrors.about ? <Text style={styles.errorText}>{fieldErrors.about}</Text> : null}
         </View>
 
