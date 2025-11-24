@@ -233,11 +233,12 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   const [headline, setHeadline] = useState('');
   const [about, setAbout] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
-  const [languages, setLanguages] = useState('');
+  const [languages, setLanguages] = useState<string[]>([]);
 
   const [specializationIds, setSpecializationIds] = useState<Array<string | number>>([]);
   const [trainingModes, setTrainingModes] = useState<string[]>([]);
   const [targetGroupIds, setTargetGroupIds] = useState<Array<string | number>>([]);
+  const [languageOptions, setLanguageOptions] = useState<Option[]>([]);
 
   const [specializationOptions, setSpecializationOptions] = useState<Option[]>([]);
   const [trainingModeOptions, setTrainingModeOptions] = useState<Option[]>([]);
@@ -289,7 +290,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     const resolvedLanguages = normalizeTrainingModes(
       collectStringSelections(payload.languages, options?.languages),
     );
-    setLanguages(resolvedLanguages.length ? resolvedLanguages.join(', ') : '');
+    setLanguages(resolvedLanguages);
 
     setSpecializationOptions(
       mergeOptionLists(
@@ -326,6 +327,12 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
         ),
         toOptionList(options?.available_target_groups),
         toOptionList(options?.target_group_options ?? options?.target_groups),
+      ),
+    );
+    setLanguageOptions(
+      mergeOptionLists(
+        toOptionList(options?.languages),
+        toOptionList(resolvedLanguages),
       ),
     );
     setProfileCompletion(
@@ -408,6 +415,20 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     [],
   );
 
+  const toggleLanguage = useCallback((code: string | number) => {
+    const value = String(code);
+
+    setLanguages(prev => {
+      const exists = prev.includes(value);
+
+      if (exists) {
+        return prev.filter(item => item !== value);
+      }
+
+      return [...prev, value];
+    });
+  }, []);
+
   const handleSave = async () => {
     Keyboard.dismiss();
 
@@ -440,11 +461,6 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
     setAuthToken(state.token);
 
-    const languagesArray = languages
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-
     const payload = {
       bio: trimmedHeadline || undefined,
       description: trimmedAbout || undefined,
@@ -455,7 +471,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
       specialization_ids: specializationIds.map(normalizeId),
       training_modes: trainingModes,
       target_group_ids: targetGroupIds.map(normalizeId),
-      languages: languagesArray,
+      languages,
     };
 
     try {
@@ -585,16 +601,14 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Języki</Text>
-          <TextInput
-            value={languages}
-            onChangeText={setLanguages}
-            placeholder="np. polski, angielski"
-            placeholderTextColor={colors.mutedText}
-            style={styles.input}
-            editable={!saving}
-          />
+          {renderOptionChips(languageOptions, languages, toggleLanguage)}
           {fieldErrors.languages ? (
             <Text style={styles.errorText}>{fieldErrors.languages}</Text>
+          ) : null}
+          {!languageOptions.length ? (
+            <Text style={styles.metaText}>
+              Brak dostępnych języków do wyboru. Spróbuj ponownie później.
+            </Text>
           ) : null}
         </View>
 
