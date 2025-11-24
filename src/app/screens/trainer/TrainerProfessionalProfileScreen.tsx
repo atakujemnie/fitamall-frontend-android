@@ -420,14 +420,6 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
     setBannerError('');
     setFieldErrors({});
 
-    if (!specializationIds.length) {
-      validationErrors.specialization_ids = 'Wybierz przynajmniej jedną specjalizację.';
-    }
-
-    if (!trainingModes.length) {
-      validationErrors.training_modes = 'Wybierz przynajmniej jedną formę treningu.';
-    }
-
     if (trimmedYears) {
       if (!Number.isFinite(parsedYears) || parsedYears < 0 || parsedYears > 40) {
         validationErrors.experience_years = 'Doświadczenie musi mieścić się w zakresie 0-40 lat.';
