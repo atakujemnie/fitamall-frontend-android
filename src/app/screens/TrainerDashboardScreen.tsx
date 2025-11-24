@@ -61,6 +61,19 @@ const dashboardTiles: Array<{
   },
 ];
 
+const missingItemLabels: Record<string, string> = {
+  city: 'Miasto',
+  country: 'Kraj',
+  bio: 'O mnie',
+  experience_years: 'Doświadczenie (lata)',
+  languages: 'Języki',
+  training_modes: 'Formy treningu',
+  specializations: 'Specjalizacje',
+  target_groups: 'Grupy docelowe',
+  avatar: 'Zdjęcie profilowe',
+  photos: 'Galeria zdjęć',
+};
+
 export const TrainerDashboardScreen: React.FC = () => {
   const navigation = useNavigation<TrainerDashboardNavigationProp>();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -133,6 +146,27 @@ export const TrainerDashboardScreen: React.FC = () => {
     return [];
   }, [dashboard]);
 
+  const translatedMissingItems = useMemo(() => {
+    return missingItems
+      .map(item => {
+        if (!item || typeof item !== 'string') {
+          return '';
+        }
+
+        const normalized = item.trim();
+        const translated = missingItemLabels[normalized];
+
+        if (translated) {
+          return translated;
+        }
+
+        const formatted = normalized.replace(/_/g, ' ');
+
+        return formatted ? `Pole: ${formatted}` : '';
+      })
+      .filter(Boolean);
+  }, [missingItems]);
+
   const isActive = useMemo(() => {
     if (dashboard?.status && typeof dashboard.status === 'object') {
       const status = dashboard.status as { is_public_trainer?: boolean };
@@ -200,7 +234,9 @@ export const TrainerDashboardScreen: React.FC = () => {
           <View style={styles.cardHeader}>
             <Text style={styles.sectionTitle}>Brakujące elementy</Text>
             <Text style={styles.sectionMeta}>
-              {missingItems.length > 0 ? `${missingItems.length} do uzupełnienia` : 'Kompletne'}
+              {translatedMissingItems.length > 0
+                ? `${translatedMissingItems.length} do uzupełnienia`
+                : 'Kompletne'}
             </Text>
           </View>
 
@@ -216,9 +252,9 @@ export const TrainerDashboardScreen: React.FC = () => {
                 <Text style={styles.retryText}>Spróbuj ponownie</Text>
               </Pressable>
             </View>
-          ) : missingItems.length > 0 ? (
+          ) : translatedMissingItems.length > 0 ? (
             <View style={styles.listColumn}>
-              {missingItems.map(item => (
+              {translatedMissingItems.map(item => (
                 <View key={item} style={styles.listRow}>
                   <View style={styles.bullet} />
                   <Text style={styles.listText}>{item}</Text>
@@ -384,23 +420,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listColumn: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   listRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   bullet: {
-    width: 8,
-    height: 8,
+    width: 6,
+    height: 6,
     borderRadius: 999,
     backgroundColor: colors.primary,
   },
   listText: {
     color: colors.text,
-    fontSize: 15,
-    flex: 1,
+    fontSize: 13,
   },
   centerRow: {
     flexDirection: 'row',
