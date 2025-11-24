@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -314,6 +315,8 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   );
 
   const handleSave = async () => {
+    Keyboard.dismiss();
+
     const validationErrors: Record<string, string> = {};
     const trimmedHeadline = headline.trim();
     const trimmedAbout = about.trim();
@@ -430,7 +433,7 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
         <Text style={styles.title}>Profil zawodowy</Text>
         <Text style={styles.subtitle}>
           Zaktualizuj swoją ofertę, aby klienci wiedzieli, w czym się specjalizujesz. Wybierz
