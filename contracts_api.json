@@ -1,345 +1,849 @@
 {
-  "base_path": "/api",
-  "endpoints": [
+  "info": {
+    "name": "Fitamall API",
+    "_postman_id": "d7e7c6a0-xxxx-xxxx-xxxx-xxxxxxxx",
+    "description": "Kolekcja Postman zawierająca wszystkie endpointy API aplikacji Fitamall (backend). Zawiera przykładowe żądania, pogrupowane logicznie, wraz z wymaganymi parametrami i nagłówkami.\n\n**Zmienne kolekcji:**\n- `base_url` – bazowy URL API (domyślnie `http://localhost`)\n- `authToken` – token autoryzacyjny Bearer dla chronionych endpointów (uzyskiwany po zalogowaniu lub rejestracji z `channel=mobile`).\n\nPo pomyślnym zalogowaniu/rejestracji w trybie mobile, należy skopiować wartość tokena (`token.plain_text`) do zmiennej `authToken`, aby móc wywoływać zabezpieczone endpointy.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
     {
-      "name": "Register client",
-      "method": "POST",
-      "path": "/auth/register/client",
-      "middleware": ["web"],
-      "request": {
-        "first_name": "string, required, max 255",
-        "last_name": "string, required, max 255",
-        "email": "email, required, lowercase, unique",
-        "password": "string, required, confirmed, Password::defaults",
-        "password_confirmation": "string, required",
-        "channel": "web|mobile, required"
-      },
-      "responses": {
-        "201_web": {
-          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
-          "guard": "web",
-          "csrf_token": "string"
+      "name": "Auth",
+      "description": "Endpointy uwierzytelniania użytkowników (logowanie, wylogowanie, sprawdzenie tożsamości).",
+      "item": [
+        {
+          "name": "Logowanie (POST /api/auth/login)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"Haslo123!\",\n    \"channel\": \"mobile\",\n    \"device_name\": \"Postman client\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logowanie użytkownika.\n\n**Body parametry:**\n- `email` *(string, wymagany)* – Email użytkownika (wymagany format email).\n- `password` *(string, wymagany)* – Hasło.\n- `channel` *(enum, wymagany)* – Kanał: `web` lub `mobile`. Dla `web` logowanie tworzy sesję i zwraca token CSRF (wymaga wcześniejszego pobrania cookie CSRF, niezalecane w Postman), dla `mobile` zwracany jest token dostępowy.\n- `device_name` *(string, wymagany przy `channel=mobile`)* – Nazwa urządzenia (używana przy generowaniu tokenu Sanctum).\n\n**Wymagania:** Brak autoryzacji (ogólnodostępny). Rate limit: 5 prób/min na email+IP (`throttle:login`):contentReference[oaicite:0]{index=0}.\n\n**Przykładowa odpowiedź (channel=mobile):** Zwraca obiekt JSON z polami `user` (dane użytkownika), `guard: \"sanctum\"`, oraz `token` zawierający `type: \"Bearer\"`, `plain_text` (token do użycia w nagłówku Authorization) i `abilities`:contentReference[oaicite:1]{index=1}. Błędne dane uwierzytelniające zwracają 422, nieaktywne konto – 403:contentReference[oaicite:2]{index=2}."
+          },
+          "response": []
         },
-        "201_mobile": {
-          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
-          "guard": "sanctum",
-          "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] }
-        }
-      },
-      "tests": ["tests/Feature/Auth/... (sprawdź scenariusze rejestracji klienta)"]
-    },
-    {
-      "name": "Register provider",
-      "method": "POST",
-      "path": "/auth/register/provider",
-      "middleware": ["web"],
-      "request": {
-        "first_name": "string, required, max 255",
-        "last_name": "string, required, max 255",
-        "email": "email, required, lowercase, unique",
-        "password": "string, required, confirmed",
-        "password_confirmation": "string, required",
-        "provider_name": "string, required, max 255",
-        "city": "string, optional, max 255",
-        "country": "string, optional, max 255",
-        "description": "string, optional",
-        "channel": "web|mobile, required"
-      },
-      "responses": {
-        "201_web": {
-          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
-          "service_provider": { "id": "int", "type": "personal_trainer", "name": "string", "slug": "string", "role": "owner" },
-          "guard": "web",
-          "csrf_token": "string"
+        {
+          "name": "Social login mobile (POST /api/auth/social/mobile)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"provider\": \"google\",\n    \"access_token\": \"<token_od_google>\",\n    \"device_name\": \"Postman client\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/social/mobile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "social",
+                "mobile"
+              ]
+            },
+            "description": "Logowanie przez dostawcę zewnętrznego (Google/Apple) na urządzeniu mobilnym:contentReference[oaicite:3]{index=3}.\n\n**Body parametry:**\n- `provider` *(string, wymagany)* – Dostawca: `google` lub `apple`:contentReference[oaicite:4]{index=4}:contentReference[oaicite:5]{index=5}.\n- `access_token` *(string, wymagany jeżeli brak `id_token` i `auth_code`)* – Token dostępu OAuth od dostawcy:contentReference[oaicite:6]{index=6}.\n- `id_token` *(string, wymagany jeżeli brak `access_token` i `auth_code`)* – Token OpenID (np. z Apple):contentReference[oaicite:7]{index=7}.\n- `auth_code` *(string, wymagany jeżeli brak `access_token` i `id_token`)* – Kod autoryzacyjny OIDC:contentReference[oaicite:8]{index=8}.\n- `device_name` *(string, wymagany)* – Nazwa urządzenia do utworzenia tokenu.\n\nPrzynajmniej jeden z parametrów `access_token`/`id_token`/`auth_code` musi być podany (w zależności od sposobu otrzymania tokenu od dostawcy):contentReference[oaicite:9]{index=9}. Endpoint zwraca analogiczną strukturę jak zwykłe logowanie mobile: `user`, `guard: sanctum`, oraz `token` typu Bearer:contentReference[oaicite:10]{index=10}. Nie wymaga wcześniejszej autoryzacji (ogólnodostępny, limitowany `throttle:social-login`)."
+          },
+          "response": []
         },
-        "201_mobile": {
-          "user": { "id": "int", "first_name": "string", "last_name": "string", "email": "string" },
-          "service_provider": { "id": "int", "type": "personal_trainer", "name": "string", "slug": "string", "role": "owner" },
-          "guard": "sanctum",
-          "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] }
+        {
+          "name": "Wylogowanie (POST /api/auth/logout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Wylogowanie użytkownika (unieważnienie tokenu lub sesji):contentReference[oaicite:11]{index=11}.\n\n**Wymagania:** Wymaga aktywnej autoryzacji (`Bearer {{authToken}}` lub sesji web):contentReference[oaicite:12]{index=12}.\n\nPo wykonaniu: usuwa bieżący token dostępowy (jeśli użyto Sanctum) oraz wylogowuje z sesji (jeśli użyto cookie), unieważnia sesję i generuje nowy token CSRF:contentReference[oaicite:13]{index=13}. Zwraca komunikat `Logged out.`:contentReference[oaicite:14]{index=14}."
+          },
+          "response": []
+        },
+        {
+          "name": "Profil własny (GET /api/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Pobranie danych aktualnie zalogowanego użytkownika:contentReference[oaicite:15]{index=15}.\n\n**Wymagania:** Wymaga autoryzacji (`Bearer {{authToken}}` lub sesji web):contentReference[oaicite:16]{index=16}.\n\nZwraca obiekt `user` zawierający m.in.: podstawowe dane użytkownika (`id`, `first_name`, `last_name`, `email`, `is_active`), listę ról `roles`, listę powiązanych obiektów `service_providers` (np. dane trenera, jeśli użytkownik jest trenerem: `id`, `type`, `name`, `slug`, `role`) oraz ewentualnie listę `social_providers` (kont powiązanych z Google/Apple):contentReference[oaicite:17]{index=17}."
+          },
+          "response": []
         }
-      },
-      "tests": ["tests/Feature/Auth/... (scenariusze rejestracji providera)"]
+      ]
     },
     {
-      "name": "Login",
-      "method": "POST",
-      "path": "/auth/login",
-      "middleware": ["web", "throttle:login"],
-      "request": {
-        "email": "email, required, lowercase",
-        "password": "string, required",
-        "channel": "web|mobile, required",
-        "device_name": "string, required if channel=mobile, max 255"
-      },
-      "responses": {
-        "200_web": { "user": "pełne dane z rolami i providerami", "guard": "web", "csrf_token": "string" },
-        "200_mobile": { "user": "pełne dane z rolami i providerami", "guard": "sanctum", "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] } },
-        "422": { "message": "Invalid credentials." },
-        "403": { "message": "User is not active." }
-      },
-      "tests": ["tests/Feature/Auth/... (login web/mobile, walidacja)"]
-    },
-    {
-      "name": "Logout",
-      "method": "POST",
-      "path": "/auth/logout",
-      "middleware": ["web", "auth:sanctum"],
-      "responses": {
-        "200": { "message": "Logged out." }
-      },
-      "tests": ["tests/Feature/Auth/... (wylogowanie, unieważnienie tokenu)"]
-    },
-    {
-      "name": "Me",
-      "method": "GET",
-      "path": "/auth/me",
-      "middleware": ["web", "auth:sanctum"],
-      "responses": {
-        "200": { "user": "pełne dane z rolami, providerami i kontami social" }
-      },
-      "tests": ["tests/Feature/Auth/... (zwracanie danych zalogowanego użytkownika)"]
-    },
-    {
-      "name": "Social login (mobile)",
-      "method": "POST",
-      "path": "/auth/social/mobile",
-      "middleware": ["web", "throttle:social-login"],
-      "request": {
-        "provider": "google|apple, required",
-        "access_token": "string, required_without id_token/auth_code",
-        "id_token": "string, required_without access_token/auth_code",
-        "auth_code": "string, required_without access_token/id_token",
-        "device_name": "string, required, max 255"
-      },
-      "responses": {
-        "200": { "user": "pełne dane z rolami, providerami i kontami social", "guard": "sanctum", "token": { "type": "Bearer", "plain_text": "string", "abilities": ["mobile"] } },
-        "422": { "message": "Unable to verify social token with provider." },
-        "403": { "message": "User is not active." }
-      },
-      "tests": ["tests/Feature/Auth/... (walidacja tokenów social, tworzenie/użycie konta)"]
-    },
-    {
-      "name": "Social login (web redirect/callback)",
-      "method": "GET",
-      "path": ["/auth/{provider}/redirect", "/auth/{provider}/callback"],
-      "middleware": [],
-      "request": { "provider": "google|apple" },
-      "responses": {
-        "302_success": "przekierowanie do SPA z aktywną sesją",
-        "422": "błąd weryfikacji tokenu",
-        "403": "użytkownik nieaktywny"
-      },
-      "tests": ["tests/Feature/Auth/... (przepływ web redirect/callback)"]
-    },
-    {
-      "name": "Public trainers stats",
-      "method": "GET",
-      "path": "/trainers/stats",
-      "middleware": [],
-      "responses": {
-        "200": { "total_public_trainers": "int" }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (pokrycie metryk/statystyk)"]
-    },
-    {
-      "name": "Public trainers filters",
-      "method": "GET",
-      "path": "/trainers/filters",
-      "middleware": [],
-      "responses": {
-        "200": { "cities": ["string"] }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (filtry miasta)"]
-    },
-    {
-      "name": "Public trainers list",
-      "method": "GET",
-      "path": "/trainers",
-      "middleware": [],
-      "query": { "city": "opcjonalny filtr po mieście" },
-      "responses": {
-        "200": [
-          { "id": "int", "first_name": "string", "last_name": "string", "city": "string|null" }
-        ]
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (lista publicznych trenerów)"]
-    },
-    {
-      "name": "Trainer dashboard",
-      "method": "GET",
-      "path": "/trainer/me | /trainer/dashboard",
-      "middleware": ["auth:sanctum", "trainer"],
-      "responses": {
-        "200": {
-          "name": "string",
-          "personal_data": "obiekt z danymi i brakującymi polami",
-          "profile": "obiekt profilu z galerią i specjalizacjami",
-          "profile_completion": "int",
-          "missing_fields": { "personal_data": ["..."], "profile": ["..."] },
-          "missing_items": ["..."],
-          "status": { "is_public_trainer": "bool", "accepting_new_clients": "bool" },
-          "available_specializations": ["id","name","slug"],
-          "available_target_groups": ["id","name","slug"]
+      "name": "Klienci",
+      "description": "Endpointy związane z kontami klientów aplikacji.",
+      "item": [
+        {
+          "name": "Rejestracja nowego klienta (POST /api/auth/register/client)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Jan\",\n    \"last_name\": \"Kowalski\",\n    \"email\": \"jan.kowalski@example.com\",\n    \"password\": \"Test12345\",\n    \"password_confirmation\": \"Test12345\",\n    \"channel\": \"mobile\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/client",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "client"
+              ]
+            },
+            "description": "Rejestracja nowego użytkownika z rolą *klient*:contentReference[oaicite:18]{index=18}:contentReference[oaicite:19]{index=19}.\n\n**Body parametry:**\n- `first_name` *(string, wymagany)* – Imię.:contentReference[oaicite:20]{index=20} \n- `last_name` *(string, wymagany)* – Nazwisko.:contentReference[oaicite:21]{index=21} \n- `email` *(string, wymagany)* – Email (unikalny, w formacie email, zmieniany na małe litery).:contentReference[oaicite:22]{index=22} \n- `password` *(string, wymagany)* – Hasło (wymagane potwierdzenie hasła).:contentReference[oaicite:23]{index=23} \n- `password_confirmation` *(string, wymagany)* – Potwierdzenie hasła (musi być zgodne z `password`).:contentReference[oaicite:24]{index=24} \n- `channel` *(enum, wymagany)* – Kanał: `web` lub `mobile`. Dla `web` nastąpi automatyczne zalogowanie na sesji i zwrócony zostanie token CSRF:contentReference[oaicite:25]{index=25}; dla `mobile` zostanie wygenerowany token dostępowy (Bearer).:contentReference[oaicite:26]{index=26}\n\n**Wymagania:** Brak autoryzacji (ogólnodostępny endpoint).\n\n**Odpowiedź:** W przypadku sukcesu zwraca `201 Created` z obiektem `user` (id, first_name, last_name, email). Dodatkowo:\n- Dla `channel=web`: `guard: \"web\"` oraz `csrf_token` (token CSRF do dalszych żądań sesyjnych):contentReference[oaicite:27]{index=27}.\n- Dla `channel=mobile`: `guard: \"sanctum\"` oraz obiekt `token` z `type: \"Bearer\"` i `plain_text` tokenem do użycia w nagłówku Authorization:contentReference[oaicite:28]{index=28}."
+          },
+          "response": []
         }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (dashboard)"]
+      ]
     },
     {
-      "name": "Trainer personal data (read/update)",
-      "method": ["GET", "PUT"],
-      "path": "/trainer/personal-data",
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(PUT)": {
-        "first_name": "string, required, max 255",
-        "last_name": "string, required, max 255",
-        "phone": "string, optional, max 50",
-        "city": "string, optional, max 255",
-        "country": "string, optional, max 255"
-      },
-      "responses": {
-        "200": {
-          "first_name": "string",
-          "last_name": "string",
-          "email": "string",
-          "phone": "string|null",
-          "city": "string|null",
-          "country": "string|null",
-          "missing_fields": ["..."],
-          "profile_completion": "int"
+      "name": "Trenerzy",
+      "description": "Endpointy związane z trenerami (dostęp publiczny oraz panel trenera).",
+      "item": [
+        {
+          "name": "Publiczne (bez autoryzacji)",
+          "description": "Publicznie dostępne endpointy dotyczące trenerów (wyszukiwarka, rejestracja trenera).",
+          "item": [
+            {
+              "name": "Rejestracja nowego trenera (POST /api/auth/register/provider)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"Anna\",\n    \"last_name\": \"Trener\",\n    \"email\": \"anna.trener@example.com\",\n    \"password\": \"Pass12345\",\n    \"password_confirmation\": \"Pass12345\",\n    \"provider_name\": \"Anna Fitness\",\n    \"city\": \"Warszawa\",\n    \"country\": \"Polska\",\n    \"description\": \"Trener personalny z 5-letnim doświadczeniem.\",\n    \"channel\": \"mobile\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register/provider",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "provider"
+                  ]
+                },
+                "description": "Rejestracja nowego użytkownika z rolą *trener* (właściciel konta trenerskiego):contentReference[oaicite:29]{index=29}:contentReference[oaicite:30]{index=30}.\n\n**Body parametry:**\n- `first_name`, `last_name`, `email`, `password`, `password_confirmation`, `channel` – pola analogiczne jak przy rejestracji klienta (opisane wyżej). Wszystkie wymagane, z tym samym formatem/zasadami.:contentReference[oaicite:31]{index=31}:contentReference[oaicite:32]{index=32} \n- `provider_name` *(string, wymagany)* – Nazwa działalności trenerskiej lub firmy (np. nazwa siłowni lub brandu osobistego):contentReference[oaicite:33]{index=33}.\n- `city` *(string, opcjonalny)* – Miasto (lokalizacja trenera):contentReference[oaicite:34]{index=34}.\n- `country` *(string, opcjonalny)* – Kraj:contentReference[oaicite:35]{index=35}.\n- `description` *(string, opcjonalny)* – Opis trenera/działalności.:contentReference[oaicite:36]{index=36}\n\n**Wymagania:** Brak autoryzacji (ogólnodostępny endpoint).\n\n**Odpowiedź:** `201 Created` z obiektem `user` (dane nowego trenera) oraz `service_provider` (dane utworzonej działalności trenerskiej: `id`, `type` = `personal_trainer`, `name`, `slug`, `role` = `owner`):contentReference[oaicite:37]{index=37}:contentReference[oaicite:38]{index=38}. Dla `channel=web` zwracany jest dodatkowo `guard: \"web\"` i `csrf_token` (oraz tworzona sesja):contentReference[oaicite:39]{index=39}; dla `channel=mobile` – `guard: \"sanctum\"` i obiekt `token` (Bearer) analogicznie jak przy rejestracji klienta:contentReference[oaicite:40]{index=40}."
+              },
+              "response": []
+            },
+            {
+              "name": "Statystyki trenerów (GET /api/trainers/stats)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/trainers/stats",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainers",
+                    "stats"
+                  ]
+                },
+                "description": "Pobiera statystyki publiczne dotyczące trenerów.\n\nZwraca łączną liczbę trenerów publicznych dostępnych w systemie: pole `total_public_trainers` (integer):contentReference[oaicite:41]{index=41}. Nie wymaga autoryzacji."
+              },
+              "response": []
+            },
+            {
+              "name": "Filtry trenerów (GET /api/trainers/filters)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/trainers/filters",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainers",
+                    "filters"
+                  ]
+                },
+                "description": "Pobiera dostępne opcje filtrowania trenerów.\n\nZwraca listę unikalnych miast, w których dostępni są publiczni trenerzy: pole `cities` (array stringów):contentReference[oaicite:42]{index=42}:contentReference[oaicite:43]{index=43}. Nie wymaga autoryzacji."
+              },
+              "response": []
+            },
+            {
+              "name": "Lista trenerów (GET /api/trainers)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/trainers?city={{city}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainers"
+                  ],
+                  "query": [
+                    {
+                      "key": "city",
+                      "value": "",
+                      "description": "Opcjonalny filtr po mieście (nazwa miasta)."
+                    }
+                  ]
+                },
+                "description": "Pobiera listę publicznych trenerów (aktywnych i oznaczonych jako publiczni):contentReference[oaicite:44]{index=44}:contentReference[oaicite:45]{index=45}.\n\n**Query parametry:**\n- `city` *(string, opcjonalny)* – nazwa miasta do filtrowania listy trenerów (zwracani będą tylko trenerzy z tego miasta):contentReference[oaicite:46]{index=46}.\n\n**Odpowiedź:** Zwraca tablicę obiektów trenerów, z polami: `id`, `first_name`, `last_name`, `city`:contentReference[oaicite:47]{index=47}. Lista jest posortowana alfabetycznie (po nazwisku i imieniu):contentReference[oaicite:48]{index=48}. Nie wymaga autoryzacji."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Panel trenera (wymaga autoryzacji)",
+          "description": "Endpointy dostępne dla zalogowanych trenerów (zarządzanie profilem, danymi, itp.). Wymagany nagłówek `Authorization: Bearer {{authToken}}` z tokenem trenera (użytkownik z rolą trenera).",
+          "item": [
+            {
+              "name": "Moje konto trenera (GET /api/trainer/me)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "me"
+                  ]
+                },
+                "description": "Pobiera dane panelu trenera (dla zalogowanego trenera):contentReference[oaicite:49]{index=49}.\n\n**Wymagania:** Autoryzacja Bearer tokenem trenera (użytkownik z rolą trenera):contentReference[oaicite:50]{index=50}\n\nZwraca obiekt danych trenera z informacjami wykorzystywanymi na dashboardzie (m.in. dane personalne, profil trenera, status publikacji itp.) wraz z listami pomocniczymi (`available_specializations`, `available_target_groups`) w polu dodatkowym:contentReference[oaicite:51]{index=51}. Struktura odpowiedzi jak w `GET /api/trainer/dashboard` (alias)."
+              },
+              "response": []
+            },
+            {
+              "name": "Dashboard trenera (GET /api/trainer/dashboard)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "dashboard"
+                  ]
+                },
+                "description": "Alias dla `GET /api/trainer/me` – zwraca ten sam zestaw danych co `/me` (dane panelu trenera, w tym personal_data, profile, status, profile_completion itp.):contentReference[oaicite:52]{index=52}. Wymaga autoryzacji trenera. Używany jako główny endpoint do wyświetlenia dashboardu trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Dane osobowe trenera (GET /api/trainer/personal-data)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/personal-data",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "personal-data"
+                  ]
+                },
+                "description": "Pobiera podstawowe dane osobowe trenera:contentReference[oaicite:53]{index=53} (m.in. imię, nazwisko, email, telefon, miasto, kraj). Wymaga autoryzacji trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Aktualizacja danych osobowych (PUT /api/trainer/personal-data)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"Jan\",\n    \"last_name\": \"Kowalski\",\n    \"phone\": \"123456789\",\n    \"city\": \"Łódź\",\n    \"country\": \"Polska\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/personal-data",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "personal-data"
+                  ]
+                },
+                "description": "Aktualizacja podstawowych danych osobowych trenera:contentReference[oaicite:54]{index=54}.\n\n**Body parametry:**\n- `first_name` *(string, wymagany)* – Imię:contentReference[oaicite:55]{index=55}.\n- `last_name` *(string, wymagany)* – Nazwisko:contentReference[oaicite:56]{index=56}.\n- `phone` *(string, opcjonalny)* – Telefon kontaktowy:contentReference[oaicite:57]{index=57}.\n- `city` *(string, opcjonalny)* – Miasto:contentReference[oaicite:58]{index=58}.\n- `country` *(string, opcjonalny)* – Kraj:contentReference[oaicite:59]{index=59}.\n\n**Wymagania:** Autoryzacja trenera. Zwraca zaktualizowane dane (tak jak w GET /trainer/personal-data)."
+              },
+              "response": []
+            },
+            {
+              "name": "Profil trenera (GET /api/trainer/profile)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "profile"
+                  ]
+                },
+                "description": "Pobiera profil trenera (dane publicznego profilu):contentReference[oaicite:60]{index=60}, w tym: bio, doświadczenie (lata), języki, formy treningu, specjalizacje, grupy docelowe, zdjęcia (galeria), oraz powiązane dane użytkownika (np. service_provider z nazwą):contentReference[oaicite:61]{index=61}. Wymaga autoryzacji trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Aktualizacja profilu (PUT /api/trainer/profile)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"bio\": \"Doświadczony trener personalny.\",\n    \"experience_years\": 5,\n    \"languages\": [\"pl\", \"en\"],\n    \"training_modes\": [\"online\", \"stacjonarnie\"],\n    \"specialization_ids\": [1, 2],\n    \"target_group_ids\": [3],\n    \"provider_name\": \"Nowa Nazwa Działalności\",\n    \"description\": \"Nowy opis działalności\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "profile"
+                  ]
+                },
+                "description": "Aktualizacja profilu trenera (danych publicznych):contentReference[oaicite:62]{index=62}:contentReference[oaicite:63]{index=63}.\n\n**Body parametry:** *(wszystkie pola opcjonalne; podajemy te, które chcemy zmienić)*\n- `bio` *(string)* – Krótki opis (bio) trenera.:contentReference[oaicite:64]{index=64}\n- `experience_years` *(integer)* – Doświadczenie w latach.:contentReference[oaicite:65]{index=65}\n- `languages` *(array[string])* – Lista języków, którymi posługuje się trener.:contentReference[oaicite:66]{index=66}\n- `training_modes` *(array[string])* – Formy prowadzenia treningów (np. online, stacjonarnie).:contentReference[oaicite:67]{index=67}\n- `specialization_ids` *(array[int])* – Lista ID specjalizacji trenera (muszą istnieć w systemie).:contentReference[oaicite:68]{index=68}\n- `target_group_ids` *(array[int])* – Lista ID grup docelowych obsługiwanych przez trenera.:contentReference[oaicite:69]{index=69}\n- `provider_name` *(string)* – Nowa nazwa działalności trenerskiej (jeśli trener chce zmienić nazwę swojej firmy/marki).:contentReference[oaicite:70]{index=70}\n- `description` *(string)* – Nowy opis działalności trenerskiej.:contentReference[oaicite:71]{index=71}\n\n**Wymagania:** Autoryzacja trenera. Zwraca zaktualizowany profil (łącznie z zaktualizowanymi powiązaniami specjalizacji/grup)."
+              },
+              "response": []
+            },
+            {
+              "name": "Opcje słownikowe (GET /api/trainer/options)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/options",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "options"
+                  ]
+                },
+                "description": "Pobiera opcje słownikowe dla panelu trenera.\n\nZwraca listy dostępnych specjalizacji (`available_specializations`: id, name, slug) oraz grup docelowych (`available_target_groups`: id, name, slug):contentReference[oaicite:72]{index=72}:contentReference[oaicite:73]{index=73}. Wymaga autoryzacji trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Dodanie/zmiana avatara (POST /api/trainer/avatar)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "avatar",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/avatar",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "avatar"
+                  ]
+                },
+                "description": "Wgrywa nowy plik avatara trenera (zdjęcie profilowe):contentReference[oaicite:74]{index=74}:contentReference[oaicite:75]{index=75}.\n\n**Body:** pole `avatar` – plik graficzny (image/jpeg, png, itp., max 4 MB):contentReference[oaicite:76]{index=76}. Wymaga autoryzacji trenera.\n\nEndpoint zapisuje plik i ustawia go jako aktualny avatar:\n- Jeśli trener miał już avatar, stary plik zostaje usunięty, a rekord zaktualizowany na nową ścieżkę:contentReference[oaicite:77]{index=77}:contentReference[oaicite:78]{index=78}.\n- Jeśli nie było avatara, dodawany jest nowy wpis jako avatar główny:contentReference[oaicite:79]{index=79}.\n\nZwraca zaktualizowany zasób profilu trenera (ze zmienionym polem avatar)."
+              },
+              "response": []
+            },
+            {
+              "name": "Usunięcie avatara (DELETE /api/trainer/avatar)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/avatar",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "avatar"
+                  ]
+                },
+                "description": "Usuwa aktualny avatar trenera (jeśli ustawiony):contentReference[oaicite:80]{index=80}.\n\nWymaga autoryzacji trenera. W przypadku braku avatara zwraca błąd 404 `Avatar not found`:contentReference[oaicite:81]{index=81}. Przy sukcesie usuwa plik z dysku i rekord zdjęcia, czyści pole avatar_path:contentReference[oaicite:82]{index=82}, zwracając komunikat `Avatar deleted`."
+              },
+              "response": []
+            },
+            {
+              "name": "Galeria trenera (GET /api/trainer/photos)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/photos",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "photos"
+                  ]
+                },
+                "description": "Pobiera listę dodatkowych zdjęć w galerii trenera (nie obejmuje avatara głównego):contentReference[oaicite:83]{index=83}.\n\nWymaga autoryzacji trenera. Zwraca listę obiektów zawierających: `id`, `url` (pełny URL do zdjęcia), `is_primary` (czy zdjęcie jest ustawione jako główne – tu zawsze false) oraz `position` (kolejność):contentReference[oaicite:84]{index=84}."
+              },
+              "response": []
+            },
+            {
+              "name": "Dodanie zdjęcia (POST /api/trainer/photos)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "photo",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/photos",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "photos"
+                  ]
+                },
+                "description": "Dodaje nowe zdjęcie do galerii trenera:contentReference[oaicite:85]{index=85}:contentReference[oaicite:86]{index=86}.\n\n**Body:** pole `photo` – plik graficzny (max 6 MB):contentReference[oaicite:87]{index=87}. Wymaga autoryzacji trenera.\n\nJeśli trener ma już 5 zdjęć w galerii, zwróci błąd 422 (`Gallery limit of 5 photos reached`):contentReference[oaicite:88]{index=88}. Przy sukcesie zapisuje plik i dodaje rekord zdjęcia z `is_primary=false` i nadanym kolejnym `position`:contentReference[oaicite:89]{index=89}:contentReference[oaicite:90]{index=90}. Zwraca dane dodanego zdjęcia (`id`, `url`, `is_primary`, `position`)."
+              },
+              "response": []
+            },
+            {
+              "name": "Usunięcie zdjęcia (DELETE /api/trainer/photos/:photoId)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/photos/{{photoId}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "photos",
+                    "{{photoId}}"
+                  ],
+                  "variable": [
+                    {
+                      "key": "photoId",
+                      "description": "ID zdjęcia do usunięcia"
+                    }
+                  ]
+                },
+                "description": "Usuwa wybrane zdjęcie z galerii trenera:contentReference[oaicite:91]{index=91}:contentReference[oaicite:92]{index=92}.\n\n**Wymagania:** Autoryzacja trenera. Należy podać ID zdjęcia w ścieżce. Jeśli zdjęcie nie istnieje lub należy do innego trenera (lub jest avatarem) – zwraca 404:contentReference[oaicite:93]{index=93}. Przy sukcesie usuwa plik i rekord zdjęcia oraz zwraca komunikat `Photo deleted`:contentReference[oaicite:94]{index=94}."
+              },
+              "response": []
+            },
+            {
+              "name": "Status publikacji (GET /api/trainer/status)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "status"
+                  ]
+                },
+                "description": "Pobiera aktualny status publikacji trenera:contentReference[oaicite:95]{index=95}.\n\nZwraca pola:\n- `is_public_trainer` *(bool)* – czy profil trenera jest publiczny (widoczny w listach dla klientów):contentReference[oaicite:96]{index=96}.\n- `accepting_new_clients` *(bool)* – czy trener przyjmuje nowych klientów:contentReference[oaicite:97]{index=97}.\n\nWymaga autoryzacji trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Aktualizacja statusu (PUT /api/trainer/status)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"is_public_trainer\": true,\n    \"accepting_new_clients\": false\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "status"
+                  ]
+                },
+                "description": "Aktualizacja statusu publikacji trenera:contentReference[oaicite:98]{index=98}.\n\n**Body parametry:**\n- `is_public_trainer` *(boolean, wymagany)* – ustaw na `true`, aby profil trenera był widoczny publicznie (w listach trenerów):contentReference[oaicite:99]{index=99}.\n- `accepting_new_clients` *(boolean, wymagany)* – `true`, jeśli trener przyjmuje nowych klientów (informacyjne):contentReference[oaicite:100]{index=100}.\n\n**Wymagania:** Autoryzacja trenera. Zwraca zaktualizowane wartości pól `is_public_trainer` i `accepting_new_clients`."
+              },
+              "response": []
+            },
+            {
+              "name": "Ustawienia zgód (GET /api/trainer/consents)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/consents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "consents"
+                  ]
+                },
+                "description": "Pobiera aktualne ustawienia zgód i preferencji powiadomień trenera:contentReference[oaicite:101]{index=101}.\n\nZwraca pola z modelu użytkownika:\n- `terms_accepted_at`, `privacy_policy_accepted_at` – znaczniki czasu akceptacji regulaminu i polityki prywatności (lub null, jeśli nie zaakceptowano):contentReference[oaicite:102]{index=102}.\n- `marketing_consent` *(bool)* oraz `marketing_consent_at` – zgoda marketingowa i czas jej wyrażenia:contentReference[oaicite:103]{index=103}.\n- `notifications_push` *(bool)* – preferencja powiadomień push:contentReference[oaicite:104]{index=104}.\n- `notifications_email` *(bool)* – preferencja powiadomień email:contentReference[oaicite:105]{index=105}.\n\nWymaga autoryzacji trenera."
+              },
+              "response": []
+            },
+            {
+              "name": "Aktualizacja zgód (PUT /api/trainer/consents)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"marketing_consent\": true,\n    \"notifications_email\": false\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/consents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "consents"
+                  ]
+                },
+                "description": "Aktualizacja zgód i preferencji powiadomień trenera:contentReference[oaicite:106]{index=106}:contentReference[oaicite:107]{index=107}.\n\n**Body parametry:** *(wszystkie opcjonalne, podajemy te, które chcemy zmienić)*\n- `terms_accepted` *(bool)* – czy trener zaakceptował regulamin (ustawienie na true zapisuje bieżący czas do `terms_accepted_at`, false usuwa go):contentReference[oaicite:108]{index=108}.\n- `privacy_policy_accepted` *(bool)* – akceptacja polityki prywatności (analogicznie jak wyżej):contentReference[oaicite:109]{index=109}.\n- `marketing_consent` *(bool)* – zgoda na marketing (true/false; ustawia też `marketing_consent_at`):contentReference[oaicite:110]{index=110}.\n- `notifications_push` *(bool)* – włączenie/wyłączenie powiadomień push:contentReference[oaicite:111]{index=111}.\n- `notifications_email` *(bool)* – włączenie/wyłączenie powiadomień email:contentReference[oaicite:112]{index=112}.\n\n**Wymagania:** Autoryzacja trenera. Zwraca zaktualizowane wartości pól zgód/preferencji tak jak w GET /trainer/consents.:contentReference[oaicite:113]{index=113}"
+              },
+              "response": []
+            },
+            {
+              "name": "Aktualizacja zgód (PUT /api/trainer/settings/consents) [alias]",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"marketing_consent\": true,\n    \"notifications_email\": false\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/settings/consents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "settings",
+                    "consents"
+                  ]
+                },
+                "description": "Alias działający identycznie jak `PUT /api/trainer/consents` (wywołuje tę samą logikę):contentReference[oaicite:114]{index=114}. Patrz opis powyżej."
+              },
+              "response": []
+            },
+            {
+              "name": "Zmiana hasła (PUT /api/trainer/change-password)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"current_password\": \"StareHaslo123!\",\n    \"password\": \"NoweHaslo123!\",\n    \"password_confirmation\": \"NoweHaslo123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/change-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "change-password"
+                  ]
+                },
+                "description": "Zmiana hasła zalogowanego trenera:contentReference[oaicite:115]{index=115}.\n\n**Body parametry:**\n- `current_password` *(string, wymagany)* – Aktualne hasło (musi być poprawne; walidowane automatycznie):contentReference[oaicite:116]{index=116}.\n- `password` *(string, wymagany)* – Nowe hasło (musi spełniać zasady zdefiniowane w Password::defaults, np. minimalna długość):contentReference[oaicite:117]{index=117}.\n- `password_confirmation` *(string, wymagany)* – Potwierdzenie nowego hasła (musi się zgadzać z `password`):contentReference[oaicite:118]{index=118}.\n\n**Wymagania:** Autoryzacja trenera. W razie podania niepoprawnego `current_password` – błąd 422.:contentReference[oaicite:119]{index=119} Przy sukcesie zwraca komunikat `Password updated`:contentReference[oaicite:120]{index=120}."
+              },
+              "response": []
+            },
+            {
+              "name": "Zmiana hasła (POST /api/trainer/change-password) [alias]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"current_password\": \"StareHaslo123!\",\n    \"password\": \"NoweHaslo123!\",\n    \"password_confirmation\": \"NoweHaslo123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trainer/change-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trainer",
+                    "change-password"
+                  ]
+                },
+                "description": "Alias dla `PUT /api/trainer/change-password` (działa identycznie jak metoda PUT):contentReference[oaicite:121]{index=121}."
+              },
+              "response": []
+            }
+          ]
         }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (pobranie/aktualizacja danych osobowych)"]
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost"
     },
     {
-      "name": "Trainer profile (read/update)",
-      "method": ["GET", "PUT"],
-      "path": "/trainer/profile",
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(PUT)": {
-        "bio": "string, optional",
-        "experience_years": "int, optional, 0-80",
-        "languages": ["string, max 50"],
-        "training_modes": ["string, max 50"],
-        "specialization_ids": ["int exists:specializations"],
-        "target_group_ids": ["int exists:target_groups"],
-        "provider_name": "string, optional, max 255",
-        "description": "string, optional"
-      },
-      "responses": {
-        "200": {
-          "bio": "string|null",
-          "experience_years": "int|null",
-          "languages": ["string"],
-          "training_modes": ["string"],
-          "provider_name": "string|null",
-          "description": "string|null",
-          "specializations": [{"id":"int","name":"string","slug":"string"}],
-          "target_groups": [{"id":"int","name":"string","slug":"string"}],
-          "avatar_url": "string|null",
-          "photos": [{"id":"int","url":"string","is_primary":false,"position":"int"}],
-          "accepting_new_clients": "bool",
-          "missing_fields": ["..."],
-          "profile_completion": "int"
-        }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (odczyt/aktualizacja profilu)"]
-    },
-    {
-      "name": "Trainer options",
-      "method": "GET",
-      "path": "/trainer/options",
-      "middleware": ["auth:sanctum", "trainer"],
-      "responses": {
-        "200": {
-          "available_specializations": [{"id":"int","name":"string","slug":"string"}],
-          "available_target_groups": [{"id":"int","name":"string","slug":"string"}]
-        }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (opcje formularzy)"]
-    },
-    {
-      "name": "Trainer avatar upload/delete",
-      "method": ["POST", "DELETE"],
-      "path": "/trainer/avatar",
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(POST)": { "avatar": "image, required, max 4096KB" },
-      "responses": {
-        "200_post": "zaktualizowany TrainerProfileResource (jak wyżej)",
-        "404_delete": { "message": "Avatar not found" },
-        "200_delete": { "message": "Avatar deleted" }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (upload/delete avatara)"]
-    },
-    {
-      "name": "Trainer gallery photos",
-      "method": ["GET", "POST", "DELETE"],
-      "path": ["/trainer/photos", "/trainer/photos/{photo}"],
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(POST)": { "photo": "image, required, max 6144KB; limit 5" },
-      "responses": {
-        "200_get": [{"id":"int","url":"string","is_primary":false,"position":"int"}],
-        "200_post": { "id":"int","url":"string","is_primary":false,"position":"int" },
-        "404_delete": { "message": "Not found" },
-        "200_delete": { "message": "Photo deleted" }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (galeria zdjęć, limit, usuwanie)"]
-    },
-    {
-      "name": "Trainer status",
-      "method": ["GET", "PUT"],
-      "path": "/trainer/status",
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(PUT)": {
-        "is_public_trainer": "boolean, required",
-        "accepting_new_clients": "boolean, required"
-      },
-      "responses": {
-        "200": {
-          "is_public_trainer": "bool",
-          "accepting_new_clients": "bool"
-        }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (status widoczności i przyjmowania klientów)"]
-    },
-    {
-      "name": "Trainer consents",
-      "method": ["GET", "PUT"],
-      "path": ["/trainer/consents", "/trainer/settings/consents"],
-      "middleware": ["auth:sanctum", "trainer"],
-      "request(PUT)": {
-        "terms_accepted": "boolean, sometimes",
-        "privacy_policy_accepted": "boolean, sometimes",
-        "marketing_consent": "boolean, sometimes",
-        "notifications_push": "boolean, sometimes",
-        "notifications_email": "boolean, sometimes"
-      },
-      "responses": {
-        "200": {
-          "terms_accepted_at": "datetime|null",
-          "privacy_policy_accepted_at": "datetime|null",
-          "marketing_consent": "bool",
-          "marketing_consent_at": "datetime|null",
-          "notifications_push": "bool",
-          "notifications_email": "bool"
-        }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (aktualizacja zgód)"]
-    },
-    {
-      "name": "Trainer change password",
-      "method": ["PUT", "POST"],
-      "path": "/trainer/change-password",
-      "middleware": ["auth:sanctum", "trainer"],
-      "request": {
-        "current_password": "string, required, must match",
-        "password": "string, required, confirmed, Password::defaults",
-        "password_confirmation": "string, required"
-      },
-      "responses": {
-        "200": { "message": "Password updated" }
-      },
-      "tests": ["tests/Feature/TrainerAreaTest.php (zmiana hasła)"]
+      "key": "authToken",
+      "value": ""
     }
   ]
 }
