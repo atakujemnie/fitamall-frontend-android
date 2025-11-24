@@ -32,6 +32,7 @@ interface Option {
 interface TrainerProfileResponse {
   headline?: string;
   bio?: string;
+  description?: string;
   about?: string;
   years_of_experience?: number;
   yearsOfExperience?: number;
@@ -178,9 +179,8 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
   }, [state.token]);
 
   const hydrateForm = useCallback((payload: TrainerProfileResponse, options?: TrainerProfileResponse) => {
-    const bio = payload.bio ?? payload.headline ?? '';
-    setHeadline(bio);
-    setAbout(payload.about ?? bio);
+    setHeadline(payload.bio ?? '');
+    setAbout(payload.description ?? payload.about ?? '');
 
     const yearsValue = getYearsValue(payload);
     setYearsOfExperience(yearsValue === undefined ? '' : String(yearsValue));
@@ -354,14 +354,14 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
 
     setAuthToken(state.token);
 
-    const combinedBio = [trimmedHeadline, trimmedAbout].filter(Boolean).join('\n\n');
     const languagesArray = languages
       .split(',')
       .map(item => item.trim())
       .filter(Boolean);
 
     const payload = {
-      bio: combinedBio || undefined,
+      bio: trimmedHeadline || undefined,
+      description: trimmedAbout || undefined,
       experience_years:
         trimmedYears === ''
           ? undefined
@@ -382,6 +382,8 @@ export const TrainerProfessionalProfileScreen: React.FC = () => {
         fallbackMessage: 'Nie udało się zapisać zmian. Spróbuj ponownie.',
         fieldNameMap: {
           bio: 'headline',
+          description: 'about',
+          about: 'about',
           experience_years: 'experience_years',
           yearsOfExperience: 'experience_years',
           years_of_experience: 'experience_years',
