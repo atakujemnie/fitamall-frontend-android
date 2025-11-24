@@ -23,7 +23,7 @@ import {
   uploadTrainerPhoto,
 } from '../../../shared/api/trainer.api';
 import { useAuth } from '../../../features/auth/AuthContext';
-import { setAuthToken } from '../../../shared/api/httpClient';
+import { httpClient, setAuthToken } from '../../../shared/api/httpClient';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
 
@@ -51,6 +51,25 @@ const normalizePhotos = (payload: TrainerPhoto[] | TrainerPhotosResponse): Train
   }
 
   return [];
+};
+
+const resolveReachableUrl = (url?: string) => {
+  if (!url) return url;
+
+  try {
+    const baseUrl = httpClient.defaults.baseURL ? new URL(httpClient.defaults.baseURL) : null;
+    const parsed = new URL(url);
+
+    if (baseUrl && ['localhost', '127.0.0.1'].includes(parsed.hostname)) {
+      parsed.hostname = baseUrl.hostname;
+      parsed.port = baseUrl.port;
+      parsed.protocol = baseUrl.protocol;
+    }
+
+    return parsed.toString();
+  } catch (error) {
+    return url;
+  }
 };
 
 const getAssetFile = (asset: Asset) => {
@@ -101,7 +120,7 @@ export const TrainerPhotosScreen: React.FC = () => {
 
     try {
       const profile = await getTrainerProfile<TrainerProfileResponse>();
-      setAvatarUrl(resolveAvatarUrl(profile));
+      setAvatarUrl(resolveReachableUrl(resolveAvatarUrl(profile)));
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się załadować avatara. Spróbuj ponownie.',
@@ -125,7 +144,11 @@ export const TrainerPhotosScreen: React.FC = () => {
 
     try {
       const response = await getTrainerPhotos<TrainerPhoto[] | TrainerPhotosResponse>();
-      setPhotos(normalizePhotos(response));
+      setPhotos(normalizePhotos(response).map(photo => ({
+        ...photo,
+        url: resolveReachableUrl(photo.url ?? photo.path),
+        path: undefined,
+      })));
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się pobrać zdjęć. Spróbuj ponownie.',
@@ -261,7 +284,11 @@ export const TrainerPhotosScreen: React.FC = () => {
       const uploaded = await uploadTrainerPhoto<TrainerPhoto>(formData);
 
       if (uploaded && (uploaded as TrainerPhoto).id) {
-        setPhotos(current => [...current, uploaded as TrainerPhoto]);
+        const normalizedPhoto: TrainerPhoto = {
+          ...uploaded,
+          url: resolveReachableUrl(uploaded.url ?? uploaded.path),
+        };
+        setPhotos(current => [...current, normalizedPhoto]);
       } else {
         await fetchPhotos();
       }

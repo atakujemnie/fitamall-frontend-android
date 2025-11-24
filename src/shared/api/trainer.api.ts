@@ -8,7 +8,11 @@ const flattenResourcePayload = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
     const envelope = payload as Record<string, unknown>;
 
-    if (envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)) {
+    if (Array.isArray(envelope.data)) {
+      return envelope.data as T;
+    }
+
+    if (envelope.data && typeof envelope.data === 'object') {
       const { data, ...rest } = envelope;
 
       return { ...(rest as Record<string, unknown>), ...(data as Record<string, unknown>) } as T;
