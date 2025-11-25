@@ -26,16 +26,11 @@ import { useAuth } from '../../../features/auth/AuthContext';
 import { httpClient, setAuthToken } from '../../../shared/api/httpClient';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
+import { resolveAvatarUrlFromProfile, TrainerProfileResponse } from './avatarResolver';
 
 const MAX_PHOTOS = 5;
 
 type TrainerPhoto = { id: string | number; url?: string; path?: string };
-
-interface TrainerProfileResponse {
-  avatar?: string;
-  avatarUrl?: string;
-  avatar_url?: string;
-}
 
 interface TrainerPhotosResponse {
   photos?: TrainerPhoto[];
@@ -104,9 +99,7 @@ export const TrainerPhotosScreen: React.FC = () => {
     }
   }, [state.token]);
 
-  const resolveAvatarUrl = useCallback((profile: TrainerProfileResponse) => {
-    return profile.avatar_url ?? profile.avatarUrl ?? profile.avatar;
-  }, []);
+  const resolveAvatarUrl = useCallback(resolveAvatarUrlFromProfile, []);
 
   const fetchAvatar = useCallback(async () => {
     if (!state.token) {
