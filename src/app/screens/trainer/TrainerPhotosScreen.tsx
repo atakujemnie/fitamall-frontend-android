@@ -27,6 +27,7 @@ import { httpClient, setAuthToken } from '../../../shared/api/httpClient';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
 import { resolveAvatarUrlFromProfile, TrainerProfileResponse } from './avatarResolver';
+import {ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 
 const MAX_PHOTOS = 5;
 
@@ -35,7 +36,11 @@ type TrainerPhoto = { id: string | number; url?: string; path?: string };
 interface TrainerPhotosResponse {
   photos?: TrainerPhoto[];
 }
-
+const handleImageError =
+  (uri: string) =>
+  (e: NativeSyntheticEvent<ImageErrorEventData>) => {
+    console.log('IMAGE_ERROR', uri, e.nativeEvent);
+  };
 const normalizePhotos = (payload: TrainerPhoto[] | TrainerPhotosResponse): TrainerPhoto[] => {
   if (Array.isArray(payload)) {
     return payload;
@@ -51,21 +56,29 @@ const normalizePhotos = (payload: TrainerPhoto[] | TrainerPhotosResponse): Train
 const resolveReachableUrl = (url?: string) => {
   if (!url) return url;
 
-  try {
-    const baseUrl = httpClient.defaults.baseURL ? new URL(httpClient.defaults.baseURL) : null;
-    const parsed = new URL(url);
+  const base = httpClient.defaults.baseURL; // 'http://10.0.2.2:8000'
+  if (!base) return url;
 
-    if (baseUrl && ['localhost', '127.0.0.1'].includes(parsed.hostname)) {
-      parsed.hostname = baseUrl.hostname;
-      parsed.port = baseUrl.port;
-      parsed.protocol = baseUrl.protocol;
-    }
+  let resolved = url;
 
-    return parsed.toString();
-  } catch (error) {
-    return url;
+  // backend może zwrócić stare linki bez portu
+  if (resolved.startsWith('http://localhost')) {
+    // wycinamy hosta z portem z base
+    const baseHost = base.replace(/\/+$/, ''); // bez trailing slash
+    resolved = resolved.replace(/^http:\/\/localhost(:\d+)?/, baseHost);
+  } else if (resolved.startsWith('http://127.0.0.1')) {
+    const baseHost = base.replace(/\/+$/, '');
+    resolved = resolved.replace(/^http:\/\/127\.0\.0\.1(:\d+)?/, baseHost);
+  } else if (resolved.startsWith('/storage/')) {
+    // na wszelki wypadek – ścieżka względna
+    const baseHost = base.replace(/\/+$/, '');
+    resolved = `${baseHost}${resolved}`;
   }
+
+  return resolved;
 };
+
+
 
 const getAssetFile = (asset: Asset) => {
   if (!asset.uri) return null;
@@ -326,6 +339,26 @@ export const TrainerPhotosScreen: React.FC = () => {
   );
 
   const availableSlots = useMemo(() => MAX_PHOTOS - photos.length, [photos.length]);
+useEffect(() => {
+  const debug = async () => {
+    if (!photos.length) return;
+    const testUrl = photos[0].url ?? photos[0].path;
+    if (!testUrl) return;
+
+    try {
+      console.log('DEBUG_FETCH_START', testUrl);
+      const res = await fetch(testUrl);
+      console.log('DEBUG_FETCH_STATUS', res.status, res.headers.get('content-length'));
+
+      const blob = await res.blob();
+      console.log('DEBUG_FETCH_BLOB_SIZE', blob.size);
+    } catch (e) {
+      console.log('DEBUG_FETCH_ERROR', testUrl, e);
+    }
+  };
+
+  debug();
+}, [photos]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -428,18 +461,23 @@ export const TrainerPhotosScreen: React.FC = () => {
                 return (
                   <View key={photo.id} style={styles.photoItem}>
                     {photoUrl ? (
-                      <Image source={{ uri: photoUrl }} style={styles.photo} />
+<Image
+  source={{ uri: photoUrl }}
+  style={styles.photo}
+  onError={handleImageError(photoUrl)}
+/>
                     ) : (
                       <View style={[styles.photo, styles.photoPlaceholder]}>
                         <Text style={styles.placeholderText}>Brak podglądu</Text>
                       </View>
                     )}
+                    
                     <Pressable
                       style={[styles.deleteBadge, isDeleting && styles.disabledButton]}
                       disabled={isDeleting}
                       onPress={() => handleDeletePhoto(photo.id)}
                     >
-                      <Text style={styles.deleteBadgeText}>{isDeleting ? 'Usuwanie...' : 'Usuń'}</Text>
+                      <Text style={styles.deleteBadgeText}>{isDeleting ? 'Usuwanie...' : photoUrl}</Text>
                     </Pressable>
                   </View>
                 );
