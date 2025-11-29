@@ -1,7 +1,7 @@
 # Frontend Geo Milestone (trainer panel)
 
 ## Wersja dokumentu
-0.2.0
+0.3.0
 
 ## Panel trenera
 - Komponent: `src/app/screens/TrainerDashboardScreen.tsx` (ekran „Panel trenera”).
@@ -14,7 +14,14 @@
 ## Lokalizacja trenera
 - Karta: „Lokalizacja” w `dashboardTiles` w `src/app/screens/TrainerDashboardScreen.tsx`.
 - Route: `TrainerLocation` w stacku `TrainerStack` (`src/app/navigation/AppNavigator.tsx`).
-- Komponent ekranu: `src/app/screens/trainer/TrainerLocationScreen.tsx` (placeholder z nagłówkiem „Lokalizacja trenera”).
+- Komponent ekranu: `src/app/screens/trainer/TrainerLocationScreen.tsx`.
+- Pobieranie danych: używa `getTrainerPersonalData` z `src/shared/api/trainer.api.ts` (autoryzacja przez `setAuthToken` z `AuthContext`).
+- Pola lokalizacji: miasto, ulica + numer (`address`), kod pocztowy (`postal_code`), kraj (`country`) – pobierane z `user` lub `service_provider` (pierwsza dostępna wartość).
+- Stany ekranu:
+  - loading – spinner `ActivityIndicator` z komunikatem „Ładowanie lokalizacji...”,
+  - error – komunikat o błędzie z przyciskiem „Spróbuj ponownie” do ponownego wywołania GET,
+  - success – sekcja informacyjna + karta z adresem używanym w wyszukiwarce.
+- Współrzędne: jeżeli `trainer_profile` (lub pola `latitude`/`longitude`) są dostępne w odpowiedzi, wyświetlany jest status (obecne vs brak współrzędnych). Same wartości liczbowe nie są pokazywane.
 
 ## Warstwa API
 - Klient API: `src/shared/api/trainer.api.ts` (funkcje `getTrainerPersonalData` i `updateTrainerPersonalData`).
