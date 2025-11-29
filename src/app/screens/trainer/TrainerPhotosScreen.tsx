@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  NativeModules,
   Platform,
   Pressable,
   ScrollView,
@@ -112,6 +113,10 @@ export const TrainerPhotosScreen: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingAvatar, setDeletingAvatar] = useState(false);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | number | null>(null);
+
+  useEffect(() => {
+    console.log('IMAGE_PICKER_MANAGER', NativeModules.ImagePickerManager);
+  }, []);
   useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
