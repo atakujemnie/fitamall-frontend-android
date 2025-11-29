@@ -191,25 +191,44 @@ export const TrainerPhotosScreen: React.FC = () => {
   }, []);
 
   const pickImage = useCallback(async () => {
+    console.log('DEBUG_PICK_IMAGE_START', {
+      baseURL: httpClient.defaults.baseURL,
+      platform: Platform.OS,
+    });
     const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.8 });
 
     if (result.didCancel) {
+      console.log('DEBUG_PICK_IMAGE_CANCELLED');
       return null;
     }
 
     if (result.errorCode || result.errorMessage) {
       const message = result.errorMessage ?? 'Nie udało się wybrać zdjęcia. Spróbuj ponownie.';
+      console.log('DEBUG_PICK_IMAGE_ERROR', {
+        errorCode: result.errorCode,
+        errorMessage: result.errorMessage,
+      });
       showToast(message);
       return null;
     }
 
+    console.log('DEBUG_PICK_IMAGE_SUCCESS', {
+      uri: result.assets?.[0]?.uri,
+      type: result.assets?.[0]?.type,
+      fileName: result.assets?.[0]?.fileName,
+    });
     return result.assets?.[0] ?? null;
   }, [showToast]);
 
   const handleUploadAvatar = useCallback(async () => {
+    console.log('DEBUG_UPLOAD_AVATAR_START', {
+      hasToken: Boolean(state.token),
+      baseURL: httpClient.defaults.baseURL,
+    });
     setAvatarError('');
 
     if (!state.token) {
+      console.log('DEBUG_UPLOAD_AVATAR_NO_TOKEN');
       return;
     }
 
@@ -222,6 +241,7 @@ export const TrainerPhotosScreen: React.FC = () => {
 
       const file = getAssetFile(asset);
       if (!file) {
+        console.log('DEBUG_UPLOAD_AVATAR_INVALID_FILE', asset);
         setAvatarError('Wybrane zdjęcie jest nieprawidłowe. Spróbuj ponownie.');
         return;
       }
@@ -229,10 +249,16 @@ export const TrainerPhotosScreen: React.FC = () => {
       const formData = new FormData();
       formData.append('avatar', file);
 
+      console.log('DEBUG_UPLOAD_AVATAR_REQUEST', {
+        fileName: file.name,
+        type: file.type,
+        uri: file.uri,
+      });
       await uploadTrainerAvatar(formData);
       await fetchAvatar();
       showToast('Avatar został zaktualizowany.');
     } catch (error) {
+      console.log('DEBUG_UPLOAD_AVATAR_ERROR', error);
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się przesłać avatara. Spróbuj ponownie.',
       });
@@ -268,14 +294,21 @@ export const TrainerPhotosScreen: React.FC = () => {
   }, [showToast, state.token]);
 
   const handleAddPhoto = useCallback(async () => {
+    console.log('DEBUG_ADD_PHOTO_START', {
+      currentCount: photos.length,
+      hasToken: Boolean(state.token),
+      baseURL: httpClient.defaults.baseURL,
+    });
     setPhotosError('');
 
     if (photos.length >= MAX_PHOTOS) {
+      console.log('DEBUG_ADD_PHOTO_LIMIT_REACHED');
       setPhotosError('Możesz dodać maksymalnie 5 zdjęć.');
       return;
     }
 
     if (!state.token) {
+      console.log('DEBUG_ADD_PHOTO_NO_TOKEN');
       return;
     }
 
@@ -288,6 +321,7 @@ export const TrainerPhotosScreen: React.FC = () => {
 
       const file = getAssetFile(asset);
       if (!file) {
+        console.log('DEBUG_ADD_PHOTO_INVALID_FILE', asset);
         setPhotosError('Wybrane zdjęcie jest nieprawidłowe. Spróbuj ponownie.');
         return;
       }
@@ -295,6 +329,11 @@ export const TrainerPhotosScreen: React.FC = () => {
       const formData = new FormData();
       formData.append('photo', file);
 
+      console.log('DEBUG_ADD_PHOTO_REQUEST', {
+        fileName: file.name,
+        type: file.type,
+        uri: file.uri,
+      });
       const uploaded = await uploadTrainerPhoto<TrainerPhoto>(formData);
 
       if (uploaded && (uploaded as TrainerPhoto).id) {
@@ -309,6 +348,7 @@ export const TrainerPhotosScreen: React.FC = () => {
 
       showToast('Zdjęcie zostało dodane.');
     } catch (error) {
+      console.log('DEBUG_ADD_PHOTO_ERROR', error);
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się przesłać zdjęcia. Spróbuj ponownie.',
       });
@@ -347,26 +387,26 @@ export const TrainerPhotosScreen: React.FC = () => {
   );
 
   const availableSlots = useMemo(() => MAX_PHOTOS - photos.length, [photos.length]);
-useEffect(() => {
-  const debug = async () => {
-    if (!photos.length) return;
-    const testUrl = photos[0].url ?? photos[0].path;
-    if (!testUrl) return;
+  useEffect(() => {
+    const debug = async () => {
+      if (!photos.length) return;
+      const testUrl = photos[0].url ?? photos[0].path;
+      if (!testUrl) return;
 
-    try {
-      console.log('DEBUG_FETCH_START', testUrl);
-      const res = await fetch(testUrl);
-      console.log('DEBUG_FETCH_STATUS', res.status, res.headers.get('content-length'));
+      try {
+        console.log('DEBUG_FETCH_START', testUrl);
+        const res = await fetch(testUrl);
+        console.log('DEBUG_FETCH_STATUS', res.status, res.headers.get('content-length'));
 
-      const blob = await res.blob();
-      console.log('DEBUG_FETCH_BLOB_SIZE', blob.size);
-    } catch (e) {
-      console.log('DEBUG_FETCH_ERROR', testUrl, e);
-    }
-  };
+        const blob = await res.blob();
+        console.log('DEBUG_FETCH_BLOB_SIZE', blob.size);
+      } catch (e) {
+        console.log('DEBUG_FETCH_ERROR', testUrl, e);
+      }
+    };
 
-  debug();
-}, [photos]);
+    debug();
+  }, [photos]);
 
   return (
     <SafeAreaView style={styles.container}>
