@@ -1,11 +1,8 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-import { Platform } from 'react-native';
 import { logDebug } from '../utils/logger';
 
-const DEFAULT_BASE_URL = 'http://localhost:8000';
-const ANDROID_EMULATOR_BASE_URL = 'http://10.0.2.2:8000';
+const BASE_URL = 'http://localhost:8000';
 
-const BASE_URL = Platform.OS === 'android' ? ANDROID_EMULATOR_BASE_URL : DEFAULT_BASE_URL;
 
 const AUTH_HEADER = 'Authorization';
 
