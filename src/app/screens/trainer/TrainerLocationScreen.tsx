@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../features/auth/AuthContext';
 import { setAuthToken } from '../../../shared/api/httpClient';
 import { getTrainerPersonalData } from '../../../shared/api/trainer.api';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
+import { TrainerStackParamList } from '../../navigation/AppNavigator';
 
 type TrainerProfileWithCoordinates = {
   latitude?: string | number | null;
@@ -32,6 +34,8 @@ const pickFirstPresent = <T extends unknown>(...values: T[]): T | undefined =>
   values.find((value) => isValuePresent(value));
 
 export const TrainerLocationScreen: React.FC = () => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<TrainerStackParamList, 'TrainerLocation'>>();
   const { state } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -202,6 +206,14 @@ export const TrainerLocationScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Lokalizacja trenera</Text>
         {renderContent()}
+        <View style={styles.footer}>
+          <Pressable
+            style={[styles.button, styles.primaryButton]}
+            onPress={() => navigation.navigate('TrainerPersonalData')}
+          >
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Edytuj adres w danych osobowych</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -256,9 +268,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
   buttonText: {
     fontWeight: '700',
     fontSize: 15,
+  },
+  primaryButtonText: {
+    color: colors.surface,
   },
   secondaryButtonText: {
     color: colors.text,
@@ -266,6 +284,9 @@ const styles = StyleSheet.create({
   successContent: {
     gap: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  footer: {
+    marginTop: 'auto',
   },
   infoCard: {
     backgroundColor: colors.surface,
