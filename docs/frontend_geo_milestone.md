@@ -1,7 +1,7 @@
 # Frontend Geo Milestone (trainer panel)
 
 ## Wersja dokumentu
-0.3.0
+0.4.0
 
 ## Panel trenera
 - Komponent: `src/app/screens/TrainerDashboardScreen.tsx` (ekran „Panel trenera”).
@@ -22,6 +22,8 @@
   - error – komunikat o błędzie z przyciskiem „Spróbuj ponownie” do ponownego wywołania GET,
   - success – sekcja informacyjna + karta z adresem używanym w wyszukiwarce.
 - Współrzędne: jeżeli `trainer_profile` (lub pola `latitude`/`longitude`) są dostępne w odpowiedzi, wyświetlany jest status (obecne vs brak współrzędnych). Same wartości liczbowe nie są pokazywane.
+- CTA edycji adresu: przycisk „Edytuj adres w danych osobowych” na ekranie Lokalizacji, który nawiguję do route `TrainerPersonalData` w `TrainerStack` (identyczny flow jak kafelek „Dane osobowe” w panelu trenera).
+- Odświeżanie danych po powrocie: ekran Lokalizacji korzysta z `useFocusEffect` do ponownego wywołania `GET /api/trainer/personal-data` przy każdym wejściu, co obejmuje powrót z formularza danych osobowych.
 
 ## Warstwa API
 - Klient API: `src/shared/api/trainer.api.ts` (funkcje `getTrainerPersonalData` i `updateTrainerPersonalData`).
