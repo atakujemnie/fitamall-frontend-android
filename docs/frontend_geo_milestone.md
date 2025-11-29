@@ -1,7 +1,7 @@
 # Frontend Geo Milestone (trainer panel)
 
 ## Wersja dokumentu
-0.1.0
+0.2.0
 
 ## Panel trenera
 - Komponent: `src/app/screens/TrainerDashboardScreen.tsx` (ekran „Panel trenera”).
@@ -10,6 +10,11 @@
 ## Dane osobowe
 - Komponent formularza: `src/app/screens/trainer/TrainerPersonalDataScreen.tsx`.
 - Nawigacja: ekran `TrainerPersonalData` w stacku `TrainerStack` (`src/app/navigation/AppNavigator.tsx`). Przejście z panelu trenera następuje przez `navigation.navigate(tile.route)` z wartości `TrainerPersonalData` w `dashboardTiles` w `TrainerDashboardScreen.tsx`.
+
+## Lokalizacja trenera
+- Karta: „Lokalizacja” w `dashboardTiles` w `src/app/screens/TrainerDashboardScreen.tsx`.
+- Route: `TrainerLocation` w stacku `TrainerStack` (`src/app/navigation/AppNavigator.tsx`).
+- Komponent ekranu: `src/app/screens/trainer/TrainerLocationScreen.tsx` (placeholder z nagłówkiem „Lokalizacja trenera”).
 
 ## Warstwa API
 - Klient API: `src/shared/api/trainer.api.ts` (funkcje `getTrainerPersonalData` i `updateTrainerPersonalData`).

@@ -9,6 +9,7 @@ import { useAuth } from '../../features/auth/AuthContext';
 import { TrainerDashboardScreen } from '../screens/TrainerDashboardScreen';
 import { TrainerPersonalDataScreen } from '../screens/trainer/TrainerPersonalDataScreen';
 import { TrainerProfessionalProfileScreen } from '../screens/trainer/TrainerProfessionalProfileScreen';
+import { TrainerLocationScreen } from '../screens/trainer/TrainerLocationScreen';
 import { TrainerPhotosScreen } from '../screens/trainer/TrainerPhotosScreen';
 import { TrainerSettingsScreen } from '../screens/TrainerSettingsScreen';
 
@@ -21,6 +22,7 @@ export type TrainerStackParamList = {
   TrainerDashboard: undefined;
   TrainerPersonalData: undefined;
   TrainerProfessionalProfile: undefined;
+  TrainerLocation: undefined;
   TrainerPhotos: undefined;
   TrainerSettings: undefined;
 };
@@ -67,6 +69,11 @@ const TrainerStackNavigator: React.FC = () => (
       name="TrainerProfessionalProfile"
       component={TrainerProfessionalProfileScreen}
       options={{ title: 'Profil zawodowy' }}
+    />
+    <TrainerStack.Screen
+      name="TrainerLocation"
+      component={TrainerLocationScreen}
+      options={{ title: 'Lokalizacja trenera' }}
     />
     <TrainerStack.Screen
       name="TrainerPhotos"
