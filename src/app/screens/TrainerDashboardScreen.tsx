@@ -50,6 +50,11 @@ const dashboardTiles: Array<{
     route: 'TrainerProfessionalProfile',
   },
   {
+    title: 'Lokalizacja',
+    description: 'Zarządzaj swoją główną lokalizacją treningów używaną w wyszukiwarce.',
+    route: 'TrainerLocation',
+  },
+  {
     title: 'Zdjęcia',
     description: 'Dodaj zdjęcia, aby zaprezentować swój styl pracy.',
     route: 'TrainerPhotos',
