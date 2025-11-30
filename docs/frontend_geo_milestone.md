@@ -41,3 +41,22 @@ Na podstawie użycia w `TrainerPersonalDataScreen.tsx`:
   country?: string;
 }
 ```
+
+## GEO V2 – założenia UX
+
+### Panel trenera
+
+#### Zakładka „Dane osobowe”
+- Zarządza wyłącznie danymi kontaktowymi.
+- Utrzymuje pola country i city jako ogólne miejsce działania.
+- Dokładne adresy (ulica, numer, kod) są zarządzane wyłącznie w zakładce „Lokalizacje”.
+
+#### Zakładka „Lokalizacje”
+- Lista maksymalnie 3 lokalizacji.
+- Każdą lokalizację można dodać, edytować lub usunąć.
+- Brak wyboru „głównej” lokalizacji – backend sam wybierze najbliższą.
+
+### Strona klienta – ekran „FindTrainer”
+- Pierwsza ścieżka: „użyj mojej lokalizacji” (uprawnienia OS, lat/lng → `GET /api/trainers`).
+- Fallback: ręczne podanie miasta/adresu, jeżeli użytkownik nie udostępni lokalizacji.
+- Wyszukiwarka nie opiera się domyślnie tylko na polu „Miasto” – jest to tryb rezerwowy.
