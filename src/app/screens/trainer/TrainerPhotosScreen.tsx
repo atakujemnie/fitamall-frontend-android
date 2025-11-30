@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import ImageCropPicker, { Image as CropImage } from 'react-native-image-crop-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   deleteTrainerAvatar,
@@ -47,6 +46,9 @@ type PickedImage = {
   width?: number;
   height?: number;
 };
+
+type CropImage = import('react-native-image-crop-picker').Image;
+type ImagePickerModule = typeof import('react-native-image-crop-picker');
 
 const normalizePhotos = (payload: TrainerPhoto[] | TrainerPhotosResponse): TrainerPhoto[] => {
   if (Array.isArray(payload)) {
@@ -104,6 +106,9 @@ export const TrainerPhotosScreen: React.FC = () => {
 
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [photos, setPhotos] = useState<TrainerPhoto[]>([]);
+
+  const [isImagePickerAvailable, setIsImagePickerAvailable] = useState<boolean | null>(null);
+  const imagePickerRef = useRef<ImagePickerModule | null>(null);
 
   const [loadingAvatar, setLoadingAvatar] = useState(true);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
@@ -196,14 +201,58 @@ export const TrainerPhotosScreen: React.FC = () => {
     }
   }, []);
 
+  const handleUnavailablePicker = useCallback(() => {
+    showToast('Dodawanie zdjęć jest niedostępne na tym urządzeniu.');
+  }, [showToast]);
+
+  const ensureImagePickerAvailable = useCallback(async (): Promise<ImagePickerModule | null> => {
+    if (imagePickerRef.current?.openPicker) {
+      setIsImagePickerAvailable(true);
+      return imagePickerRef.current;
+    }
+
+    try {
+      const pickerModule = await import('react-native-image-crop-picker');
+
+      if (pickerModule?.openPicker) {
+        imagePickerRef.current = pickerModule;
+        setIsImagePickerAvailable(true);
+        return pickerModule;
+      }
+    } catch (error: any) {
+      console.log('DEBUG_IMAGE_PICKER_UNAVAILABLE', {
+        message: error?.message ?? String(error),
+      });
+    }
+
+    setIsImagePickerAvailable(false);
+    return null;
+  }, []);
+
+  useEffect(() => {
+    ensureImagePickerAvailable();
+  }, [ensureImagePickerAvailable]);
+
+  useEffect(() => {
+    if (isImagePickerAvailable === false) {
+      handleUnavailablePicker();
+    }
+  }, [handleUnavailablePicker, isImagePickerAvailable]);
+
   const pickImage = useCallback(async (): Promise<PickedImage | null> => {
     console.log('DEBUG_PICK_IMAGE_START', {
       baseURL: httpClient.defaults.baseURL,
       platform: Platform.OS,
     });
 
+    const imagePicker = await ensureImagePickerAvailable();
+    if (!imagePicker?.openPicker) {
+      handleUnavailablePicker();
+      return null;
+    }
+
     try {
-      const image = (await ImageCropPicker.openPicker({
+      const image = (await imagePicker.openPicker({
         mediaType: 'photo',
         cropping: false,
         compressImageQuality: 0.8,
@@ -235,7 +284,7 @@ export const TrainerPhotosScreen: React.FC = () => {
       showToast('Nie udało się wybrać zdjęcia. Spróbuj ponownie.');
       throw error;
     }
-  }, [showToast]);
+  }, [ensureImagePickerAvailable, handleUnavailablePicker, showToast]);
 
   const handleUploadAvatar = useCallback(async () => {
     console.log('DEBUG_UPLOAD_AVATAR_START', {
@@ -405,6 +454,7 @@ export const TrainerPhotosScreen: React.FC = () => {
   );
 
   const availableSlots = useMemo(() => MAX_PHOTOS - photos.length, [photos.length]);
+  const pickerUnavailable = isImagePickerAvailable === false;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -440,8 +490,12 @@ export const TrainerPhotosScreen: React.FC = () => {
             )}
             <View style={styles.avatarActions}>
               <Pressable
-                style={[styles.button, styles.primaryButton, (uploadingAvatar || deletingAvatar) && styles.disabledButton]}
-                disabled={uploadingAvatar || deletingAvatar}
+                style={[
+                  styles.button,
+                  styles.primaryButton,
+                  (uploadingAvatar || deletingAvatar || pickerUnavailable) && styles.disabledButton,
+                ]}
+                disabled={uploadingAvatar || deletingAvatar || pickerUnavailable}
                 onPress={handleUploadAvatar}
               >
                 <Text style={styles.buttonText}>
@@ -487,8 +541,12 @@ export const TrainerPhotosScreen: React.FC = () => {
 
           <View style={styles.galleryHeader}>
             <Pressable
-              style={[styles.button, styles.primaryButton, (uploadingPhoto || photos.length >= MAX_PHOTOS) && styles.disabledButton]}
-              disabled={uploadingPhoto || photos.length >= MAX_PHOTOS}
+              style={[
+                styles.button,
+                styles.primaryButton,
+                (uploadingPhoto || photos.length >= MAX_PHOTOS || pickerUnavailable) && styles.disabledButton,
+              ]}
+              disabled={uploadingPhoto || photos.length >= MAX_PHOTOS || pickerUnavailable}
               onPress={handleAddPhoto}
             >
               <Text style={styles.buttonText}>{uploadingPhoto ? 'Wysyłanie...' : 'Dodaj zdjęcie'}</Text>
