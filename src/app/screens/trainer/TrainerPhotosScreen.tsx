@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  NativeModules,
   Platform,
   Pressable,
   ScrollView,
@@ -13,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Asset, launchImageLibrary } from 'react-native-image-picker';
+import ImageCropPicker, { Image as CropImage } from 'react-native-image-crop-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   deleteTrainerAvatar,
@@ -27,27 +26,28 @@ import { useAuth } from '../../../features/auth/AuthContext';
 import { httpClient, setAuthToken } from '../../../shared/api/httpClient';
 import { mapApiError } from '../../../shared/utils/apiErrors';
 import { colors, spacing } from '../../../shared/theme';
-import { resolveAvatarUrlFromProfile, TrainerProfileResponse } from './avatarResolver';
-import {ImageErrorEventData, NativeSyntheticEvent } from 'react-native';
 
 const MAX_PHOTOS = 5;
 
 type TrainerPhoto = { id: string | number; url?: string; path?: string };
 
-interface TrainerProfileResponse {
+type TrainerPhotosResponse = {
+  photos?: TrainerPhoto[];
+};
+
+type TrainerProfileResponse = {
   avatar?: string;
   avatarUrl?: string;
   avatar_url?: string;
-}
+};
 
-interface TrainerPhotosResponse {
-  photos?: TrainerPhoto[];
-}
-const handleImageError =
-  (uri: string) =>
-  (e: NativeSyntheticEvent<ImageErrorEventData>) => {
-    console.log('IMAGE_ERROR', uri, e.nativeEvent);
-  };
+type PickedImage = {
+  path: string;
+  mime?: string;
+  width?: number;
+  height?: number;
+};
+
 const normalizePhotos = (payload: TrainerPhoto[] | TrainerPhotosResponse): TrainerPhoto[] => {
   if (Array.isArray(payload)) {
     return payload;
@@ -85,15 +85,17 @@ const resolveReachableUrl = (url?: string) => {
   return resolved;
 };
 
+const resolveAvatarUrlFromProfile = (profile: TrainerProfileResponse) => {
+  return profile.avatarUrl ?? profile.avatar_url ?? profile.avatar;
+};
 
-
-const getAssetFile = (asset: Asset) => {
-  if (!asset.uri) return null;
+const getFileFromPickedImage = (img: PickedImage | null) => {
+  if (!img?.path) return null;
 
   return {
-    uri: asset.uri,
-    type: asset.type ?? 'image/jpeg',
-    name: asset.fileName ?? `photo-${Date.now()}.jpg`,
+    uri: img.path,
+    type: img.mime ?? 'image/jpeg',
+    name: `photo-${Date.now()}.jpg`,
   } as any;
 };
 
@@ -115,16 +117,13 @@ export const TrainerPhotosScreen: React.FC = () => {
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | number | null>(null);
 
   useEffect(() => {
-    console.log('IMAGE_PICKER_MANAGER', NativeModules.ImagePickerManager);
-  }, []);
-  useEffect(() => {
     if (state.token) {
       setAuthToken(state.token);
     }
   }, [state.token]);
 
   const resolveAvatarUrl = useCallback((profile: TrainerProfileResponse) => {
-    return profile.avatar_url ?? profile.avatarUrl ?? profile.avatar;
+    return resolveAvatarUrlFromProfile(profile);
   }, []);
 
   const fetchAvatar = useCallback(async () => {
@@ -163,11 +162,13 @@ export const TrainerPhotosScreen: React.FC = () => {
 
     try {
       const response = await getTrainerPhotos<TrainerPhoto[] | TrainerPhotosResponse>();
-      setPhotos(normalizePhotos(response).map(photo => ({
-        ...photo,
-        url: resolveReachableUrl(photo.url ?? photo.path),
-        path: undefined,
-      })));
+      setPhotos(
+        normalizePhotos(response).map(photo => ({
+          ...photo,
+          url: resolveReachableUrl(photo.url ?? photo.path),
+          path: undefined,
+        })),
+      );
     } catch (error) {
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się pobrać zdjęć. Spróbuj ponownie.',
@@ -195,34 +196,45 @@ export const TrainerPhotosScreen: React.FC = () => {
     }
   }, []);
 
-  const pickImage = useCallback(async () => {
+  const pickImage = useCallback(async (): Promise<PickedImage | null> => {
     console.log('DEBUG_PICK_IMAGE_START', {
       baseURL: httpClient.defaults.baseURL,
       platform: Platform.OS,
     });
-    const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.8 });
 
-    if (result.didCancel) {
-      console.log('DEBUG_PICK_IMAGE_CANCELLED');
-      return null;
-    }
+    try {
+      const image = (await ImageCropPicker.openPicker({
+        mediaType: 'photo',
+        cropping: false,
+        compressImageQuality: 0.8,
+        multiple: false,
+      })) as CropImage | CropImage[] | null;
 
-    if (result.errorCode || result.errorMessage) {
-      const message = result.errorMessage ?? 'Nie udało się wybrać zdjęcia. Spróbuj ponownie.';
-      console.log('DEBUG_PICK_IMAGE_ERROR', {
-        errorCode: result.errorCode,
-        errorMessage: result.errorMessage,
+      if (!image || Array.isArray(image)) {
+        return null;
+      }
+
+      console.log('DEBUG_PICK_IMAGE_SUCCESS', {
+        uri: image.path,
+        type: image.mime,
+        width: image.width,
+        height: image.height,
       });
-      showToast(message);
-      return null;
-    }
 
-    console.log('DEBUG_PICK_IMAGE_SUCCESS', {
-      uri: result.assets?.[0]?.uri,
-      type: result.assets?.[0]?.type,
-      fileName: result.assets?.[0]?.fileName,
-    });
-    return result.assets?.[0] ?? null;
+      return {
+        path: image.path,
+        mime: image.mime,
+        width: image.width,
+        height: image.height,
+      } satisfies PickedImage;
+    } catch (error: any) {
+      if (error?.code === 'E_PICKER_CANCELLED') {
+        return null;
+      }
+
+      showToast('Nie udało się wybrać zdjęcia. Spróbuj ponownie.');
+      throw error;
+    }
   }, [showToast]);
 
   const handleUploadAvatar = useCallback(async () => {
@@ -233,7 +245,6 @@ export const TrainerPhotosScreen: React.FC = () => {
     setAvatarError('');
 
     if (!state.token) {
-      console.log('DEBUG_UPLOAD_AVATAR_NO_TOKEN');
       return;
     }
 
@@ -241,29 +252,31 @@ export const TrainerPhotosScreen: React.FC = () => {
     setUploadingAvatar(true);
 
     try {
-      const asset = await pickImage();
-      if (!asset) return;
+      const pickedImage = await pickImage();
+      if (!pickedImage) return;
 
-      const file = getAssetFile(asset);
+      const file = getFileFromPickedImage(pickedImage);
       if (!file) {
-        console.log('DEBUG_UPLOAD_AVATAR_INVALID_FILE', asset);
         setAvatarError('Wybrane zdjęcie jest nieprawidłowe. Spróbuj ponownie.');
         return;
       }
 
       const formData = new FormData();
       formData.append('avatar', file);
-
-      console.log('DEBUG_UPLOAD_AVATAR_REQUEST', {
-        fileName: file.name,
-        type: file.type,
-        uri: file.uri,
-      });
       await uploadTrainerAvatar(formData);
       await fetchAvatar();
       showToast('Avatar został zaktualizowany.');
-    } catch (error) {
-      console.log('DEBUG_UPLOAD_AVATAR_ERROR', error);
+    } catch (error: any) {
+      console.log('DEBUG_UPLOAD_AVATAR_ERROR', {
+        code: error?.code,
+        message: error?.message ?? String(error),
+      });
+
+      if (error?.code?.startsWith?.('E_PICKER')) {
+        showToast('Nie udało się wybrać zdjęcia. Spróbuj ponownie.');
+        return;
+      }
+
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się przesłać avatara. Spróbuj ponownie.',
       });
@@ -307,13 +320,11 @@ export const TrainerPhotosScreen: React.FC = () => {
     setPhotosError('');
 
     if (photos.length >= MAX_PHOTOS) {
-      console.log('DEBUG_ADD_PHOTO_LIMIT_REACHED');
       setPhotosError('Możesz dodać maksymalnie 5 zdjęć.');
       return;
     }
 
     if (!state.token) {
-      console.log('DEBUG_ADD_PHOTO_NO_TOKEN');
       return;
     }
 
@@ -321,24 +332,17 @@ export const TrainerPhotosScreen: React.FC = () => {
     setUploadingPhoto(true);
 
     try {
-      const asset = await pickImage();
-      if (!asset) return;
+      const pickedImage = await pickImage();
+      if (!pickedImage) return;
 
-      const file = getAssetFile(asset);
+      const file = getFileFromPickedImage(pickedImage);
       if (!file) {
-        console.log('DEBUG_ADD_PHOTO_INVALID_FILE', asset);
         setPhotosError('Wybrane zdjęcie jest nieprawidłowe. Spróbuj ponownie.');
         return;
       }
 
       const formData = new FormData();
       formData.append('photo', file);
-
-      console.log('DEBUG_ADD_PHOTO_REQUEST', {
-        fileName: file.name,
-        type: file.type,
-        uri: file.uri,
-      });
       const uploaded = await uploadTrainerPhoto<TrainerPhoto>(formData);
 
       if (uploaded && (uploaded as TrainerPhoto).id) {
@@ -352,8 +356,17 @@ export const TrainerPhotosScreen: React.FC = () => {
       }
 
       showToast('Zdjęcie zostało dodane.');
-    } catch (error) {
-      console.log('DEBUG_ADD_PHOTO_ERROR', error);
+    } catch (error: any) {
+      console.log('DEBUG_ADD_PHOTO_ERROR', {
+        code: error?.code,
+        message: error?.message ?? String(error),
+      });
+
+      if (error?.code?.startsWith?.('E_PICKER')) {
+        showToast('Nie udało się wybrać zdjęcia. Spróbuj ponownie.');
+        return;
+      }
+
       const mapped = mapApiError(error, {
         fallbackMessage: 'Nie udało się przesłać zdjęcia. Spróbuj ponownie.',
       });
@@ -392,26 +405,6 @@ export const TrainerPhotosScreen: React.FC = () => {
   );
 
   const availableSlots = useMemo(() => MAX_PHOTOS - photos.length, [photos.length]);
-  useEffect(() => {
-    const debug = async () => {
-      if (!photos.length) return;
-      const testUrl = photos[0].url ?? photos[0].path;
-      if (!testUrl) return;
-
-      try {
-        console.log('DEBUG_FETCH_START', testUrl);
-        const res = await fetch(testUrl);
-        console.log('DEBUG_FETCH_STATUS', res.status, res.headers.get('content-length'));
-
-        const blob = await res.blob();
-        console.log('DEBUG_FETCH_BLOB_SIZE', blob.size);
-      } catch (e) {
-        console.log('DEBUG_FETCH_ERROR', testUrl, e);
-      }
-    };
-
-    debug();
-  }, [photos]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -456,7 +449,11 @@ export const TrainerPhotosScreen: React.FC = () => {
                 </Text>
               </Pressable>
               <Pressable
-                style={[styles.button, styles.secondaryButton, (!avatarUrl || deletingAvatar || uploadingAvatar) && styles.disabledButton]}
+                style={[
+                  styles.button,
+                  styles.secondaryButton,
+                  (!avatarUrl || deletingAvatar || uploadingAvatar) && styles.disabledButton,
+                ]}
                 disabled={!avatarUrl || deletingAvatar || uploadingAvatar}
                 onPress={handleDeleteAvatar}
               >
@@ -514,17 +511,13 @@ export const TrainerPhotosScreen: React.FC = () => {
                 return (
                   <View key={photo.id} style={styles.photoItem}>
                     {photoUrl ? (
-<Image
-  source={{ uri: photoUrl }}
-  style={styles.photo}
-  onError={handleImageError(photoUrl)}
-/>
+                      <Image source={{ uri: photoUrl }} style={styles.photo} />
                     ) : (
                       <View style={[styles.photo, styles.photoPlaceholder]}>
                         <Text style={styles.placeholderText}>Brak podglądu</Text>
                       </View>
                     )}
-                    
+
                     <Pressable
                       style={[styles.deleteBadge, isDeleting && styles.disabledButton]}
                       disabled={isDeleting}
