@@ -1,40 +1,27 @@
 package com.fitamalltemp
 
 import android.app.Application
+import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
-import com.facebook.react.ReactNativeHost
-import com.facebook.react.ReactPackage
-import com.facebook.react.shell.MainReactPackage
-import com.facebook.soloader.SoLoader
+import com.facebook.react.ReactHost
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.imagepicker.ImagePickerPackage
 
 class MainApplication : Application(), ReactApplication {
 
-    private val mReactNativeHost: ReactNativeHost =
-        object : ReactNativeHost(this) {
+  override val reactHost: ReactHost by lazy {
+    getDefaultReactHost(
+      context = applicationContext,
+      packageList =
+        PackageList(this).packages.apply {
+          add(ImagePickerPackage())
+        },
+    )
+  }
 
-            override fun getUseDeveloperSupport(): Boolean {
-                return true
-            }
-
-            override fun getPackages(): List<ReactPackage> {
-                return listOf(
-                    MainReactPackage(),
-                    ImagePickerPackage()
-                )
-            }
-
-            override fun getJSMainModuleName(): String {
-                return "index"
-            }
-        }
-
-    override fun getReactNativeHost(): ReactNativeHost {
-        return mReactNativeHost
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        SoLoader.init(this, false)
-    }
+  override fun onCreate() {
+    super.onCreate()
+    loadReactNative(this)
+  }
 }
